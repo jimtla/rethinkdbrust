@@ -1,21 +1,21 @@
 
-pub struct Field(&str,&str)
+pub struct Field(String, String);
 
 pub struct Element {
     fields: Vec<Field>
 }
 
 pub struct Connection {
-    url: str,
-    port: str
+    url: String,
+    port: String
 }
 
 pub struct Db {
-    name: str
+    name: String
 }
 
 pub struct Query {
-    stmt: str
+    stmt: String
 }
 
 pub struct Result {
@@ -30,36 +30,35 @@ impl Element {
     }
 }
 
-impl DB {
+impl Db {
+
+    fn new(name: &str)-> Db {
+        Db{name:name.to_string()}
+    }
+
     fn table_create(name: &str)-> Query {
+        Query{stmt:name.to_string()}
+    }
 
+    fn table(name: &str)-> Query {
+        Query{stmt:name.to_string()}
     }
 }
 
-impl Table {
-    fn insert(elements: &Vec<Element>)-> Query {
-
-    }
-}
-
-impl Query {
+/*impl Query {
     pub fn run<F>(&self, Connection &con, callback: F)
-    where F : Fn(Result){
-
+    where F : Fn(Result) {
+        //executa a query e chama callback(res)
     }
-}
+}*/
 
 impl Connection {
 
-    pub fn connect()->Connection {
-
+    pub fn connect(url: String , port: String)->Connection {
+        Connection{url:url, port: port}
     }
 
-    pub fn use(&self, table: &str)-> Connection {
+    /*pub fn use(&self, dbname: &str)-> Db {
 
-    }
-
-    pub fn db(&self, name: str)-> DB {
-
-    }
+    }*/
 }
