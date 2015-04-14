@@ -58,12 +58,22 @@ impl Db {
 impl Connection {
 
     pub fn connect(host: &str , port: u16)->Connection {
-        
+
         let stream = TcpStream::connect((host, port)).ok().unwrap();
 
-        Connection{host   : host.to_string(), 
+        let conn = Connection{host   : host.to_string(),
                    port   : port,
-                   stream : BufStream::new(stream)}
+                   stream : BufStream::new(stream)};
+
+        conn.handshake();
+
+
+        conn
+
+    }
+
+    fn handshake(&self)-> Db {
+
     }
 
     /*pub fn use(&self, dbname: &str)-> Db {
