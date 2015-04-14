@@ -1,6 +1,5 @@
-
-use std::net::SocketAddrV4;
-use std::net::Ipv4Addr;
+use std::io::{BufStream, Error, Write, Read, BufRead};
+use std::net::TcpStream;
 
 pub struct Field(String, String);
 
@@ -9,9 +8,9 @@ pub struct Element {
 }
 
 pub struct Connection {
-    url: String,
-    port: String,
-    socket: SocketAddrV4
+    pub host: String,
+    pub port: u16,
+    stream: BufStream<TcpStream>
 }
 
 pub struct Db {
@@ -58,13 +57,13 @@ impl Db {
 
 impl Connection {
 
-    pub fn connect(url: String , port: u16)->Connection {
+    pub fn connect(host: &str , port: u16)->Connection {
+        
+        let stream = TcpStream::connect((host, port)).ok().unwrap();
 
-        let ip = Ipv4Addr.from_str(url).OK();
-
-        let sock = SocketAddrV4.new(ip , port);
-
-        Connection{url:url, port: port, socket:sock}
+        Connection{host   : host.to_string(), 
+                   port   : port,
+                   stream : BufStream::new(stream)}
     }
 
     /*pub fn use(&self, dbname: &str)-> Db {
