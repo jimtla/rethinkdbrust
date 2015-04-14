@@ -94,3 +94,8 @@ impl Connection {
 
     }*/
 }
+
+#[test]
+fn test_connect() {
+    Connection::connect("localhost", 28015);
+}
