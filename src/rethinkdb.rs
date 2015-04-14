@@ -1,4 +1,7 @@
 
+use std::net::SocketAddrV4;
+use std::net::Ipv4Addr;
+
 pub struct Field(String, String);
 
 pub struct Element {
@@ -7,7 +10,8 @@ pub struct Element {
 
 pub struct Connection {
     url: String,
-    port: String
+    port: String,
+    socket: SocketAddrV4
 }
 
 pub struct Db {
@@ -54,8 +58,13 @@ impl Db {
 
 impl Connection {
 
-    pub fn connect(url: String , port: String)->Connection {
-        Connection{url:url, port: port}
+    pub fn connect(url: String , port: u16)->Connection {
+
+        let ip = Ipv4Addr.from_str(url).OK();
+
+        let sock = SocketAddrV4.new(ip , port);
+
+        Connection{url:url, port: port, socket:sock}
     }
 
     /*pub fn use(&self, dbname: &str)-> Db {
