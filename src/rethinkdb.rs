@@ -6,6 +6,12 @@ use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
 use std::rc::Rc;
 use ql2::*;
 use rustc_serialize::json;
+use rustc_serialize::json::{ToJson, Json};
+
+
+trait ToQueryTypes<'b,'a> {
+    fn to_query_types(&'a self) -> QueryTypes;
+}
 
 pub struct Connection {
     pub host : String,
@@ -17,15 +23,22 @@ pub struct Connection {
 pub struct Db<'a> {
     term : Term_TermType,
     stm  : String,
-    conn : Rc<&'a Connection>
+    conn : Rc<&'a Connection>,
+    name : String
 }
 
 pub struct TableCreate<'a> {
     term : Term_TermType,
     stm  : String,
-    db   : Rc<&'a Db<'a>>
+    db   : Rc<&'a Db<'a>>,
+    name : String
 }
 
+impl<'b, 'a> ToQueryTypes<'b,'a> for TableCreate<'b> {
+    fn to_query_types(&'a self) -> QueryTypes {
+        QueryTypes::Query(self.term, vec![self.db.to_query_types(), QueryTypes::Data(self.name.clone())])
+    }
+}
 
 
 impl<'a> Db<'a> {
@@ -34,10 +47,17 @@ impl<'a> Db<'a> {
         TableCreate {
             term : Term_TermType::TABLE_CREATE,
             stm  : "table_create".to_string(),
-            db   : db.clone()
+            db   : db.clone(),
+            name : name.to_string()
         }
     }
 
+}
+
+impl<'b,'a> ToQueryTypes<'b,'a> for Db<'b> {
+    fn to_query_types(&'a self) -> QueryTypes {
+        QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
+    }
 }
 
 impl<'a> TableCreate<'a> {
@@ -78,8 +98,8 @@ impl Connection {
         self.stream.read_until(null_s, &mut recv);
 
         match recv.pop() {
-            Some(null_s) => print!("{:?}", "OK, foi"),
-            _ => panic!("{:?}", "Unable to connect")
+            Some(null_s) => print!("{:?}", "OK, foi\n"),
+            _ => panic!("{:?}", "Unable to connect\n")
         }
     }
 
@@ -88,12 +108,33 @@ impl Connection {
         Db {
             term : Term_TermType::DB,
             stm  : "db".to_string(),
-            conn : conn.clone()
+            conn : conn.clone(),
+            name : name.to_string()
         }
 
     }
 
 
+}
+
+enum QueryTypes {
+    Query(Term_TermType, Vec<QueryTypes>),
+    Data(String)
+}
+
+impl ToJson for QueryTypes {
+    fn to_json(&self) -> Json {
+        match *self  {
+            QueryTypes::Query(t, ref v) => { 
+                let child = v.to_json();
+                let mut me = Vec::new();
+                me.push(Json::U64(t as u64));
+                me.push(child);
+                Json::Array(me)
+            }
+            QueryTypes::Data(ref s) => Json::String(s.clone())
+        }
+    }
 }
 
 #[test]
@@ -110,7 +151,19 @@ fn test_connect() {
     
     let conn = Connection::connect("localhost", 28015, "");
     let db = conn.db("foo");
-    db.table_create("person").run();
-    assert_eq!("db", db.stm);
+    // assert_eq!("db", db.stm);
+    let qd = db.table_create("person").to_query_types();
+
+    print!("{:?}", json::encode(&qd.to_json()));
+
+    // let db = QueryTypes::Query(Term_TermType::DB, vec![QueryTypes::Data("FOO".to_string())]);
+    // let table = QueryTypes::Query(Term_TermType::TABLE, vec!(db, QueryTypes::Data("users".to_string())));
+    // let filter = QueryTypes::Query(Term_TermType::FILTER, vec![table, QueryTypes::Data("{name : \"Paulo\"}".to_string())]);
+    // print!("\n{:?}", json::encode(&filter.to_json()).unwrap());
+
+    assert_eq!(1,2);
     //conn.db("foo").insert(person).run();
+
+
+
 }
