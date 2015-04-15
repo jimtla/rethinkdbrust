@@ -1,10 +1,8 @@
  #![feature(core)]
 extern crate byteorder;
+extern crate protobuf;
 mod rethinkdb;
-
+mod ql2;
 use rethinkdb::Connection;
 
-#[test]
-fn it_works() {
-    Connection::connect("localhost", 28015, "OK");
-}
+
