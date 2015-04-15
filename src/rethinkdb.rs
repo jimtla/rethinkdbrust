@@ -50,7 +50,7 @@ impl Connection {
 
         match recv.pop() {
             Some(null_s) => print!("{:?}", "OK, foi"),
-            _ => print!("{:?}", "Unable to connect")
+            _ => panic!("{:?}", "Unable to connect")
         }
         
     }
