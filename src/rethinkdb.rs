@@ -2,7 +2,6 @@ extern crate byteorder;
 
 use std::io::{BufStream, Error, Write, Read, BufRead};
 use std::net::TcpStream;
-
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
 
 
@@ -60,30 +59,6 @@ impl Db {
         //executa a query e chama callback(res)
     }
 }*/
-
-// fn to_array(value : u32) -> [u8;4] {
-
-//     let fa : u32 = 255;
-//     let mut x:u32 = value;
-//     let mut res:u32 = 0;
-
-//     let mut b1:u8 = 0;
-//     let mut b2:u8 = 0;
-//     let mut b3:u8 = 0;
-//     let mut b4:u8 = 0;
-
-//     res = x >> 24 & fa;
-//     b1 = res.to_u8().unwrap_or(0);
-//     res = x >> 16 & fa;
-//     b2 = res.to_u8().unwrap_or(0);
-
-//     res = x >> 8 & fa;
-//     b3 = res.to_u8().unwrap_or(0);
-
-//     b4 = x.to_u8().unwrap_or(0);
-
-//     [b1, b2, b3, b4]
-// }
 
 impl Connection {
 
