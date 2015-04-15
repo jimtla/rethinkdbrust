@@ -1,4 +1,7 @@
 [package]
 name = "rethinkdbrust"
 version = "0.0.1"
-authors = ["abraaoisvi <abraao.isvi@gmail.com>"]
+authors = ["abraaoisvi <abraao.isvi@gmail.com>", "paulo suzart <paulosuzart@gmail.com>"]
+
+[dependencies]
+rustc-serialize = "*"
