@@ -5,3 +5,4 @@ authors = ["abraaoisvi <abraao.isvi@gmail.com>", "paulo suzart <paulosuzart@gmai
 
 [dependencies]
 rustc-serialize = "*"
+byteorder = "*"

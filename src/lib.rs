@@ -1,3 +1,5 @@
+ #![feature(core)]
+extern crate byteorder;
 mod rethinkdb;
 
 use rethinkdb::Connection;
