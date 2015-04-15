@@ -3,14 +3,46 @@ extern crate byteorder;
 use std::io::{BufStream, Error, Write, Read, BufRead};
 use std::net::TcpStream;
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
+use std::rc::Rc;
 use ql2::*;
-
+use rustc_serialize::json;
 
 pub struct Connection {
     pub host: String,
     pub port: u16,
     stream: BufStream<TcpStream>,
 	auth : String
+}
+
+pub struct Db<'a> {
+    term : Term_TermType,
+    stm  : String,
+    conn : &'a Connection
+}
+
+pub struct TableCreate<'a> {
+    db : &'a Db,
+    term : Term_TermType,
+    stm : String
+}
+
+
+impl Db {
+    pub fn table_create (&self) -> TableCreate {
+        TableCreate {
+            term : Term_TermType::TABLE_CREATE,
+            stm : "table_create",
+            db : self
+        }
+
+    }
+}
+
+impl TableCreate {
+    pub fn run(&self) -> bool {
+        true
+    }
+    
 }
 
 
@@ -33,12 +65,7 @@ impl Connection {
 
     }
 
-
-
     fn handshake(&mut self)  {
-        use ql2::VersionDummy_Version;
-        let V0_4 =  0x400c2d20;
-        let JSON =  0x7e6970c7;
         self.stream.write_u32::<LittleEndian>(VersionDummy_Version::V0_4 as u32);
         self.stream.write_u32::<LittleEndian>(0);
         self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
@@ -52,12 +79,35 @@ impl Connection {
             Some(null_s) => print!("{:?}", "OK, foi"),
             _ => panic!("{:?}", "Unable to connect")
         }
-        
     }
+
+    fn db(&self, name : &str) -> Db {
+        Db {
+            term : Term_TermType::DB,
+            stm  : "db".to_string(),
+            conn : self
+        }
+
+    }
+
 
 }
 
 #[test]
 fn test_connect() {
-    Connection::connect("localhost", 28015, "");
+    struct Person {
+        name : String,
+        age : i8
+    };
+    
+    let person = Person {
+        name : "Nacho".to_string(),
+        age : 6
+    };
+    
+    let conn = Connection::connect("localhost", 28015, "");
+    let db = conn.db("foo");
+    db.table_create("person").run();
+    assert_eq!("db", db.stm);
+    //conn.db("foo").insert(person).run();
 }
