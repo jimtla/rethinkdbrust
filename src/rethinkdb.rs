@@ -8,10 +8,10 @@ use ql2::*;
 use rustc_serialize::json;
 
 pub struct Connection {
-    pub host: String,
-    pub port: u16,
-    stream: BufStream<TcpStream>,
-	auth : String
+    pub host : String,
+    pub port : u16,
+    stream   : BufStream<TcpStream>,
+	auth     : String
 }
 
 pub struct Db<'a> {
@@ -21,18 +21,18 @@ pub struct Db<'a> {
 }
 
 pub struct TableCreate<'a> {
-    db : &'a Db,
     term : Term_TermType,
-    stm : String
+    stm  : String,
+    db   : &'a  Db
 }
 
 
 impl Db {
-    pub fn table_create (&self) -> TableCreate {
+    pub fn table_create (&self, name : &str) -> TableCreate {
         TableCreate {
             term : Term_TermType::TABLE_CREATE,
-            stm : "table_create",
-            db : self
+            stm  : "table_create",
+            db   : self
         }
 
     }
@@ -49,7 +49,7 @@ impl TableCreate {
 
 impl Connection {
 
-    pub fn connect(host: &str , port: u16, auth : &str)->Connection {
+    pub fn connect(host: &str , port: u16, auth : &str) -> Connection {
 
         let stream = TcpStream::connect((host, port)).ok().unwrap();
 
