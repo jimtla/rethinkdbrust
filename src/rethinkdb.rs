@@ -9,7 +9,7 @@ use rustc_serialize::json;
 use rustc_serialize::json::{ToJson, Json};
 
 
-trait ToQueryTypes<'b,'a> {
+trait ToQueryTypes<'a> {
     fn to_query_types(&'a self) -> QueryTypes;
 }
 
@@ -34,7 +34,7 @@ pub struct TableCreate<'a> {
     name : String
 }
 
-impl<'b, 'a> ToQueryTypes<'b,'a> for TableCreate<'b> {
+impl<'a> ToQueryTypes<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> QueryTypes {
         QueryTypes::Query(self.term, vec![self.db.to_query_types(), QueryTypes::Data(self.name.clone())])
     }
@@ -54,7 +54,7 @@ impl<'a> Db<'a> {
 
 }
 
-impl<'b,'a> ToQueryTypes<'b,'a> for Db<'b> {
+impl<'a> ToQueryTypes<'a> for Db<'a> {
     fn to_query_types(&'a self) -> QueryTypes {
         QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
     }
