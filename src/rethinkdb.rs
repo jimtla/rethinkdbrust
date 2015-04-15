@@ -17,28 +17,30 @@ pub struct Connection {
 pub struct Db<'a> {
     term : Term_TermType,
     stm  : String,
-    conn : &'a Connection
+    conn : Rc<&'a Connection>
 }
 
 pub struct TableCreate<'a> {
     term : Term_TermType,
     stm  : String,
-    db   : &'a  Db
+    db   : Rc<&'a Db<'a>>
 }
 
 
-impl Db {
-    pub fn table_create (&self, name : &str) -> TableCreate {
+
+impl<'a> Db<'a> {
+    pub fn table_create (&'a self, name : &str) -> TableCreate {
+        let db = Rc::new(self);
         TableCreate {
             term : Term_TermType::TABLE_CREATE,
-            stm  : "table_create",
-            db   : self
+            stm  : "table_create".to_string(),
+            db   : db.clone()
         }
-
     }
+
 }
 
-impl TableCreate {
+impl<'a> TableCreate<'a> {
     pub fn run(&self) -> bool {
         true
     }
@@ -82,10 +84,11 @@ impl Connection {
     }
 
     fn db(&self, name : &str) -> Db {
+        let conn = Rc::new(self);
         Db {
             term : Term_TermType::DB,
             stm  : "db".to_string(),
-            conn : self
+            conn : conn.clone()
         }
 
     }
