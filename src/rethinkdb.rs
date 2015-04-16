@@ -10,10 +10,11 @@ use rustc_serialize::json;
 use rustc_serialize::json::{ToJson, Json};
 use std::num::ToPrimitive;
 use std::string::String;
+use std::collections::BTreeMap;
 
 enum QueryTypes {
     Query(Term_TermType, Vec<QueryTypes>),
-    QueryWithArgs(Term_TermType, Vec<QueryTypes>, String),
+    QueryWithArgs(Term_TermType, Vec<QueryTypes>, BTreeMap<String, json::Json>),
     Data(String)
 }
 
@@ -83,10 +84,11 @@ trait RQLQuery<'a> {
 
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> QueryTypes {
+        let args : BTreeMap<String, json::Json> = BTreeMap::new();
         QueryTypes::QueryWithArgs(self.term, 
                                   vec![self.db.to_query_types(), 
                                        QueryTypes::Data(self.name.clone())], 
-                                  "{}".to_string())
+                                  args)
     }
 }
 
