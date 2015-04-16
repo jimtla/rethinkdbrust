@@ -3,16 +3,16 @@ extern crate byteorder;
 
 use std::io::{BufStream, Error, Write, Read, BufRead};
 use std::net::TcpStream;
-use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
+use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
 use std::rc::Rc;
 use ql2::*;
 use rustc_serialize::json;
 use rustc_serialize::json::{ToJson, Json};
 use std::num::ToPrimitive;
-use std::borrow::Borrow;
 
 enum QueryTypes {
     Query(Term_TermType, Vec<QueryTypes>),
+    QueryWithArgs(Term_TermType, Vec<QueryTypes>, String),
     Data(String)
 }
 
@@ -54,14 +54,24 @@ trait RQLQuery<'a> {
 
     fn run(&'a self, conn : &mut Connection) -> bool {
         let query = self.to_query_types();
-        let token = 0u8;
+        let token = 0u64;
         let as_json = json::encode(&query.to_json()).unwrap();
-        print!("{:?}", as_json);
         let json_bytes = as_json.as_bytes();
-        conn.stream.write_u8(token);
+        print!("{:?}, {:?}, {:?}", token, as_json, json_bytes.len().to_u32().unwrap());
+        conn.stream.write_u64::<LittleEndian>(token);
         conn.stream.write_u32::<LittleEndian>(json_bytes.len().to_u32().unwrap());
-        conn.stream.write(json_bytes);
+        write!(conn.stream, "{:?}", as_json);
         conn.stream.flush();
+
+        let mut recv = Vec::new();
+        let null_s = b"\0"[0];
+        conn.stream.read_until(null_s, &mut recv);
+
+        match recv.pop() {
+            Some(null_s) => print!("{:?}, {:?}", "OK, foi\n", recv),
+            _ => panic!("{:?}", "Unable to connect\n")
+        }
+
         true
     }
     fn to_query_types(&'a self) -> QueryTypes;
@@ -71,10 +81,43 @@ trait RQLQuery<'a> {
 
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> QueryTypes {
-        QueryTypes::Query(self.term, vec![self.db.to_query_types(), QueryTypes::Data(self.name.clone())])
+        QueryTypes::QueryWithArgs(self.term, 
+                                  vec![self.db.to_query_types(), 
+                                       QueryTypes::Data(self.name.clone())], 
+                                  "{}".to_string())
     }
 }
 
+
+impl<'a> RQLQuery<'a> for Db {
+    fn to_query_types(&'a self) -> QueryTypes {
+        QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
+    }
+}
+
+impl ToJson for QueryTypes {
+    fn to_json(&self) -> Json {
+        match *self  {
+            QueryTypes::QueryWithArgs(t, ref v, ref a) => {
+                let child = v.to_json();
+                let mut me = Vec::new();
+                me.push(Json::U64(t as u64));
+                me.push(child);
+                me.push(a.to_json());
+                Json::Array(me)
+
+            } 
+            QueryTypes::Query(t, ref v) => { 
+                let child = v.to_json();
+                let mut me = Vec::new();
+                me.push(Json::U64(t as u64));
+                me.push(child);
+                Json::Array(me)
+            }
+            QueryTypes::Data(ref s) => Json::String(s.clone())
+        }
+    }
+}
 
 impl Db {
     pub fn table_create (&self, name : &str) -> TableCreate {
@@ -87,12 +130,6 @@ impl Db {
         }
     }
 
-}
-
-impl<'a> RQLQuery<'a> for Db {
-    fn to_query_types(&'a self) -> QueryTypes {
-        QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
-    }
 }
 
 
@@ -125,27 +162,13 @@ impl Connection {
         self.stream.read_until(null_s, &mut recv);
 
         match recv.pop() {
-            Some(null_s) => print!("{:?}", "OK, foi\n"),
+            Some(null_s) => println!("{:?}", "OK, foi\n"),
             _ => panic!("{:?}", "Unable to connect\n")
         }
     }
 
 }
 
-impl ToJson for QueryTypes {
-    fn to_json(&self) -> Json {
-        match *self  {
-            QueryTypes::Query(t, ref v) => { 
-                let child = v.to_json();
-                let mut me = Vec::new();
-                me.push(Json::U64(t as u64));
-                me.push(child);
-                Json::Array(me)
-            }
-            QueryTypes::Data(ref s) => Json::String(s.clone())
-        }
-    }
-}
 
 #[test]
 fn test_connect() {
