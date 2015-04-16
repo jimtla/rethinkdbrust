@@ -172,7 +172,7 @@ impl Connection {
 
 }
 
-
+    use ::protobuf::Message;
 #[test]
 fn test_connect() {
     struct Person {
@@ -190,6 +190,39 @@ fn test_connect() {
     assert_eq!("db", db.stm);
     //let qd = db.table_create("person").to_query_types();
     db.table_create("person").run(&mut conn);
+
+    let mut db_datum = Datum::new();
+    db_datum.set_field_type(Datum_DatumType::R_STR);
+    db_datum.set_r_str("test".to_string());
+    
+    let mut db_term = Term::new();
+    db_term.set_field_type(Term_TermType::DB);
+    db_term.set_datum(db_datum);
+
+    let mut table_crate_datum = Datum::new();
+    table_crate_datum.set_field_type(Datum_DatumType::R_STR);
+    table_crate_datum.set_r_str("animals".to_string());
+
+    let mut table_create_term = Term::new();
+    table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
+    table_create_term.set_datum(table_crate_datum);
+
+    let vec_args = vec![db_term];
+    let args = ::protobuf::RepeatedField::from_vec(vec_args);
+    table_create_term.set_args(args);
+
+
+    let mut query = Query::new();
+    query.set_field_type(Query_QueryType::START);
+    query.set_token(1i64);
+    query.set_query(table_create_term);
+
+    let mut stream = TcpStream::connect(("localhost", 28015)).ok().unwrap();
+    let mut writer = ::protobuf::stream::CodedOutputStream::new(&mut stream);
+
+    query.write_to_with_cached_sizes(&mut writer);
+
+
 
     //print!("{:?}", json::encode(&qd.to_json()));
 
