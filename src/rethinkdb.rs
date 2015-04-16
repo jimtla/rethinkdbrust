@@ -1,5 +1,6 @@
 extern crate byteorder;
 
+
 use std::io::{BufStream, Error, Write, Read, BufRead};
 use std::net::TcpStream;
 use byteorder::{ReadBytesExt, WriteBytesExt, BigEndian, LittleEndian};
@@ -7,6 +8,25 @@ use std::rc::Rc;
 use ql2::*;
 use rustc_serialize::json;
 use rustc_serialize::json::{ToJson, Json};
+use std::num::ToPrimitive;
+use std::borrow::Borrow;
+
+trait RQLQuery {
+
+    fn do_run<'c,'d, T: ToQueryTypes<'c,'d>>(q : &'d T, conn : &mut Connection) -> bool {
+        let query = q.to_query_types();
+        let token = 0u8;
+        let as_json = json::encode(&query.to_json()).unwrap();
+        let json_bytes = as_json.as_bytes();
+        conn.stream.write_u8(token);
+        conn.stream.write_u32::<LittleEndian>(json_bytes.len().to_u32().unwrap());
+        conn.stream.write(json_bytes);
+        conn.stream.flush();
+        true
+    }
+
+    fn run(&self) -> bool;
+}
 
 
 trait ToQueryTypes<'b,'a> {
@@ -34,6 +54,13 @@ pub struct TableCreate<'a> {
     name : String
 }
 
+impl<'d,'c> RQLQuery for TableCreate<'c> {
+    fn run(&self) -> bool {
+        let conn = self.db.conn.make_unique();
+        TableCreate::do_run(self, conn)
+    }
+}
+
 impl<'b, 'a> ToQueryTypes<'b,'a> for TableCreate<'b> {
     fn to_query_types(&'a self) -> QueryTypes {
         QueryTypes::Query(self.term, vec![self.db.to_query_types(), QueryTypes::Data(self.name.clone())])
@@ -59,14 +86,6 @@ impl<'b,'a> ToQueryTypes<'b,'a> for Db<'b> {
         QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
     }
 }
-
-impl<'a> TableCreate<'a> {
-    pub fn run(&self) -> bool {
-        true
-    }
-    
-}
-
 
 
 impl Connection {
@@ -152,9 +171,10 @@ fn test_connect() {
     let conn = Connection::connect("localhost", 28015, "");
     let db = conn.db("foo");
     // assert_eq!("db", db.stm);
-    let qd = db.table_create("person").to_query_types();
+    //let qd = db.table_create("person").to_query_types();
+    &db.table_create("person").run();
 
-    print!("{:?}", json::encode(&qd.to_json()));
+    //print!("{:?}", json::encode(&qd.to_json()));
 
     // let db = QueryTypes::Query(Term_TermType::DB, vec![QueryTypes::Data("FOO".to_string())]);
     // let table = QueryTypes::Query(Term_TermType::TABLE, vec!(db, QueryTypes::Data("users".to_string())));
