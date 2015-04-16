@@ -11,12 +11,52 @@ use rustc_serialize::json::{ToJson, Json};
 use std::num::ToPrimitive;
 use std::borrow::Borrow;
 
-trait RQLQuery {
+enum QueryTypes {
+    Query(Term_TermType, Vec<QueryTypes>),
+    Data(String)
+}
 
-    fn do_run<'c,'d, T: ToQueryTypes<'c,'d>>(q : &'d T, conn : &mut Connection) -> bool {
-        let query = q.to_query_types();
+/* Structs to manage databse */
+pub struct Connection {
+    pub host : String,
+    pub port : u16,
+    stream   : BufStream<TcpStream>,
+    auth     : String
+}
+
+pub struct Db {
+    term : Term_TermType,
+    stm  : String,
+    name : String
+}
+
+pub struct TableCreate<'a> {
+    term : Term_TermType,
+    stm  : String,
+    db   : &'a Db,
+    name : String
+}
+
+///////////////////
+/* Module fns */
+fn db(name : &str) -> Db {
+    Db {
+        term : Term_TermType::DB,
+        stm  : "db".to_string(),
+        name : name.to_string()
+    }
+}
+
+
+///////////////////
+/* Module Traits */
+trait RQLQuery<'a> {
+
+    fn run(&'a self, conn : &mut Connection) -> bool {
+        let query = self.to_query_types();
         let token = 0u8;
         let as_json = json::encode(&query.to_json()).unwrap();
+        print!("{:?}", as_json);
         let json_bytes = as_json.as_bytes();
         conn.stream.write_u8(token);
         conn.stream.write_u32::<LittleEndian>(json_bytes.len().to_u32().unwrap());
@@ -24,64 +64,32 @@ trait RQLQuery {
         conn.stream.flush();
         true
     }
-
-    fn run(&self) -> bool;
-}
-
-
-trait ToQueryTypes<'b,'a> {
     fn to_query_types(&'a self) -> QueryTypes;
+
 }
 
-pub struct Connection {
-    pub host : String,
-    pub port : u16,
-    stream   : BufStream<TcpStream>,
-	auth     : String
-}
 
-pub struct Db<'a> {
-    term : Term_TermType,
-    stm  : String,
-    conn : Rc<&'a Connection>,
-    name : String
-}
-
-pub struct TableCreate<'a> {
-    term : Term_TermType,
-    stm  : String,
-    db   : Rc<&'a Db<'a>>,
-    name : String
-}
-
-impl<'d,'c> RQLQuery for TableCreate<'c> {
-    fn run(&self) -> bool {
-        let conn = self.db.conn.make_unique();
-        TableCreate::do_run(self, conn)
-    }
-}
-
-impl<'b, 'a> ToQueryTypes<'b,'a> for TableCreate<'b> {
+impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> QueryTypes {
         QueryTypes::Query(self.term, vec![self.db.to_query_types(), QueryTypes::Data(self.name.clone())])
     }
 }
 
 
-impl<'a> Db<'a> {
-    pub fn table_create (&'a self, name : &str) -> TableCreate {
+impl Db {
+    pub fn table_create (&self, name : &str) -> TableCreate {
         let db = Rc::new(self);
         TableCreate {
             term : Term_TermType::TABLE_CREATE,
             stm  : "table_create".to_string(),
-            db   : db.clone(),
+            db   : self,
             name : name.to_string()
         }
     }
 
 }
 
-impl<'b,'a> ToQueryTypes<'b,'a> for Db<'b> {
+impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> QueryTypes {
         QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
     }
@@ -122,23 +130,6 @@ impl Connection {
         }
     }
 
-    fn db(&self, name : &str) -> Db {
-        let conn = Rc::new(self);
-        Db {
-            term : Term_TermType::DB,
-            stm  : "db".to_string(),
-            conn : conn.clone(),
-            name : name.to_string()
-        }
-
-    }
-
-
-}
-
-enum QueryTypes {
-    Query(Term_TermType, Vec<QueryTypes>),
-    Data(String)
 }
 
 impl ToJson for QueryTypes {
@@ -168,11 +159,11 @@ fn test_connect() {
         age : 6
     };
     
-    let conn = Connection::connect("localhost", 28015, "");
-    let db = conn.db("foo");
+    let mut conn = Connection::connect("localhost", 28015, "");
+    let db = db("test");
     // assert_eq!("db", db.stm);
     //let qd = db.table_create("person").to_query_types();
-    &db.table_create("person").run();
+    db.table_create("person").run(&mut conn);
 
     //print!("{:?}", json::encode(&qd.to_json()));
 
