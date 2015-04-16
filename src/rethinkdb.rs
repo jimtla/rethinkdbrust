@@ -175,21 +175,21 @@ impl Connection {
     use ::protobuf::Message;
 #[test]
 fn test_connect() {
-    struct Person {
-        name : String,
-        age : i8
-    };
+    // struct Person {
+    //     name : String,
+    //     age : i8
+    // };
     
-    let person = Person {
-        name : "Nacho".to_string(),
-        age : 6
-    };
+    // let person = Person {
+    //     name : "Nacho".to_string(),
+    //     age : 6
+    // };
     
-    let mut conn = Connection::connect("localhost", 28015, "");
-    let db = db("test");
-    assert_eq!("db", db.stm);
-    //let qd = db.table_create("person").to_query_types();
-    db.table_create("person").run(&mut conn);
+    // let mut conn = Connection::connect("localhost", 28015, "");
+    // let db = db("test");
+    // assert_eq!("db", db.stm);
+    // //let qd = db.table_create("person").to_query_types();
+    // db.table_create("person").run(&mut conn);
 
     let mut db_datum = Datum::new();
     db_datum.set_field_type(Datum_DatumType::R_STR);
