@@ -100,6 +100,25 @@ macro_rules! datum { //TODO: reduce repetition
 }
 
 
+macro_rules! term_query {
+    ($ty:path, $args:expr, $opts:expr) => {{
+        let mut term = Term::new();
+        term.set_field_type($ty);
+        term.set_args(::protobuf::RepeatedField::from_vec($args));
+        term.set_optargs(::protobuf::RepeatedField::from_vec($opts));
+        term.compute_size();
+        term
+    }};
+    ($ty:path, $args:expr) => {{
+        let mut term = Term::new();
+        term.set_field_type($ty);
+        term.set_args(::protobuf::RepeatedField::from_vec($args));
+        term.compute_size();
+        term
+    }};
+
+}
+
 #[macro_export]
 macro_rules! term_datum {
     ($datum:expr) => {{
@@ -160,11 +179,10 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
 
     let table_create_datum_term = term_datum!(STR => self.name);
 
-    let mut table_create_term = Term::new();
-    table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
-    table_create_term.set_args(::protobuf::RepeatedField::from_vec(vec![self.db.to_query_types(), table_create_datum_term]));
-    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c]));
-    table_create_term.compute_size();
+    let mut table_create_term = term_query!(Term_TermType::TABLE_CREATE, 
+                                            vec![self.db.to_query_types(), table_create_datum_term],
+                                            vec![opts_a, opts_b, opts_c]);
+    
     table_create_term
     }
 }
@@ -172,21 +190,8 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
 
 impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> Term {
-        let mut db_datum = Datum::new();
-        db_datum.set_field_type(Datum_DatumType::R_STR);
-        db_datum.set_r_str(self.name.clone());
-        db_datum.compute_size();
-
-        let mut db_datum_term = Term::new();
-        db_datum_term.set_field_type(Term_TermType::DATUM);
-        db_datum_term.set_datum(db_datum);
-        db_datum_term.compute_size();
-    
-        let mut db_term = Term::new();
-        db_term.set_field_type(Term_TermType::DB);
-        db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
-        db_term.compute_size();
-        db_term
+        let mut db_datum_term = term_datum!(STR => self.name);
+        term_query!(Term_TermType::DB, vec![db_datum_term])
     }
 }
 
