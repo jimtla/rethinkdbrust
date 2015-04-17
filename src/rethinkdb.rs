@@ -157,7 +157,7 @@ impl Connection {
     fn handshake(&mut self)  {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Version::V0_4 as u32);
         self.stream.write_u32::<LittleEndian>(0);
-        self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
+        self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::PROTOBUF as u32);
         self.stream.flush();
         
         // let mut recv = Vec::new();
@@ -224,7 +224,7 @@ fn test_connect() {
 
     let mut shars_datum = Datum::new();
     shars_datum.set_field_type(Datum_DatumType::R_NUM);
-    shars_datum.set_r_num(0.0);
+    shars_datum.set_r_num(1f64);
     shars_datum.compute_size();
 
     let mut shars_term = Term::new();
@@ -234,7 +234,7 @@ fn test_connect() {
 
     let mut reps_datum = Datum::new();
     reps_datum.set_field_type(Datum_DatumType::R_NUM);
-    reps_datum.set_r_num(0.0);
+    reps_datum.set_r_num(1f64);
     reps_datum.compute_size();
     
     let mut reps_term = Term::new();
@@ -259,7 +259,7 @@ fn test_connect() {
     opts_a.compute_size();
     
     let mut opts_b = Term_AssocPair::new();
-    opts_b.set_key("shars".to_string());
+    opts_b.set_key("shards".to_string());
     opts_b.set_val(shars_term);
     opts_b.compute_size();
 
@@ -282,7 +282,7 @@ fn test_connect() {
     let mut table_create_term = Term::new();
     table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
     table_create_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_term, datum_term]));
-    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c, opts_d]));
+    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c]));
     table_create_term.compute_size();
 
 
