@@ -22,7 +22,7 @@ enum QueryTypes {
 pub struct Connection {
     pub host : String,
     pub port : u16,
-    stream   : BufStream<TcpStream>,
+    stream   : TcpStream,
     auth     : String
 }
 
@@ -55,25 +55,25 @@ fn db(name : &str) -> Db {
 trait RQLQuery<'a> {
 
     fn run(&'a self, conn : &mut Connection) -> bool {
-        let query = self.to_query_types();
-        let token = 5u64;
-        let as_json = json::encode(&query.to_json()).unwrap();
-        print!("{:?}, {:?}, {:?}", token, as_json.len().to_u32().unwrap(), as_json);
-        conn.stream.write_u64::<LittleEndian>(token);
-        conn.stream.write_u32::<LittleEndian>(as_json.len().to_u32().unwrap());
-        //conn.stream.write(json_bytes);
-        write!(conn.stream, "{:?}", as_json);
-        conn.stream.flush();
+        // let query = self.to_query_types();
+        // let token = 5u64;
+        // let as_json = json::encode(&query.to_json()).unwrap();
+        // print!("{:?}, {:?}, {:?}", token, as_json.len().to_u32().unwrap(), as_json);
+        // conn.stream.write_u64::<LittleEndian>(token);
+        // conn.stream.write_u32::<LittleEndian>(as_json.len().to_u32().unwrap());
+        // //conn.stream.write(json_bytes);
+        // write!(conn.stream, "{:?}", as_json);
+        // conn.stream.flush();
 
-        let mut recv = Vec::new();
-        //unsafe { recv.set_len(12) };
-        let null_s = b"}"[0];
-        conn.stream.read_until(null_s, &mut recv);
+        // let mut recv = Vec::new();
+        // //unsafe { recv.set_len(12) };
+        // let null_s = b"}"[0];
+        // conn.stream.read_until(null_s, &mut recv);
 
-        match recv.pop() {
-            Some(null_s) => println!("{:?}, {:?}", "CRIOU TABEL, foi\n", String::from_utf8(recv)),
-            _ => panic!("{:?}", "Unable to connect\n")
-        }
+        // match recv.pop() {
+        //     Some(null_s) => println!("{:?}, {:?}", "CRIOU TABEL, foi\n", String::from_utf8(recv)),
+        //     _ => panic!("{:?}", "Unable to connect\n")
+        // }
 
         true
     }
@@ -145,7 +145,7 @@ impl Connection {
         let mut conn = Connection{
                     host    : host.to_string(),
                     port    : port,
-                    stream  : BufStream::new(stream),
+                    stream  : stream,
 				    auth    : auth.to_string()
                 };
 
@@ -157,17 +157,17 @@ impl Connection {
     fn handshake(&mut self)  {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Version::V0_4 as u32);
         self.stream.write_u32::<LittleEndian>(0);
-        self.stream.write_u32::<LittleEndian>(0x7e6970c7);
+        self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
         self.stream.flush();
         
-        let mut recv = Vec::new();
-        let null_s = b"\0"[0];
-        self.stream.read_until(null_s, &mut recv);
+        // let mut recv = Vec::new();
+        // let null_s = b"\0"[0];
+        // self.stream.read_until(null_s, &mut recv);
 
-        match recv.pop() {
-            Some(null_s) => println!("{:?}", "OK, foi\n"),
-            _ => panic!("{:?}", "Unable to connect\n")
-        }
+        // match recv.pop() {
+        //     Some(null_s) => println!("{:?}", "OK, foi\n"),
+        //     _ => panic!("{:?}", "Unable to connect\n")
+        // }
     }
 
 }
@@ -185,7 +185,7 @@ fn test_connect() {
     //     age : 6
     // };
     
-    // let mut conn = Connection::connect("localhost", 28015, "");
+    let mut conn = Connection::connect("localhost", 28015, "");
     // let db = db("test");
     // assert_eq!("db", db.stm);
     // //let qd = db.table_create("person").to_query_types();
@@ -194,33 +194,97 @@ fn test_connect() {
     let mut db_datum = Datum::new();
     db_datum.set_field_type(Datum_DatumType::R_STR);
     db_datum.set_r_str("test".to_string());
+
+    let mut db_datum_term = Term::new();
+    db_datum_term.set_field_type(Term_TermType::DATUM);
+    db_datum_term.set_datum(db_datum);
     
     let mut db_term = Term::new();
     db_term.set_field_type(Term_TermType::DB);
-    db_term.set_datum(db_datum);
+    db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
 
     let mut table_crate_datum = Datum::new();
     table_crate_datum.set_field_type(Datum_DatumType::R_STR);
     table_crate_datum.set_r_str("animals".to_string());
 
+    let mut primary_key_datum = Datum::new();
+    primary_key_datum.set_field_type(Datum_DatumType::R_STR);
+    primary_key_datum.set_r_str("id".to_string());
+    let mut primary_key_term = Term::new();
+    primary_key_term.set_field_type(Term_TermType::DATUM);
+    primary_key_term.set_datum(primary_key_datum);
+
+
+    let mut shars_datum = Datum::new();
+    shars_datum.set_field_type(Datum_DatumType::R_NUM);
+    shars_datum.set_r_num(0.0);
+    let mut shars_term = Term::new();
+    shars_term.set_field_type(Term_TermType::DATUM);
+    shars_term.set_datum(shars_datum);
+
+    let mut reps_datum = Datum::new();
+    reps_datum.set_field_type(Datum_DatumType::R_NUM);
+    reps_datum.set_r_num(0.0);
+    let mut reps_term = Term::new();
+    reps_term.set_field_type(Term_TermType::DATUM);
+    reps_term.set_datum(reps_datum);
+
+
+    let mut prims_datum = Datum::new();
+    prims_datum.set_field_type(Datum_DatumType::R_STR);
+    prims_datum.set_r_str("x".to_string());
+    let mut prims_term = Term::new();
+    prims_term.set_field_type(Term_TermType::DATUM);
+    prims_term.set_datum(prims_datum);
+
+    let mut opts_a = Term_AssocPair::new();
+    opts_a.set_key("primary_key".to_string());
+    opts_a.set_val(primary_key_term);
+    
+    let mut opts_b = Term_AssocPair::new();
+    opts_b.set_key("shars".to_string());
+    opts_b.set_val(shars_term);
+
+    let mut opts_c = Term_AssocPair::new();
+    opts_c.set_key("replicas".to_string());
+    opts_c.set_val(reps_term);
+    
+    let mut opts_d = Term_AssocPair::new();
+    opts_d.set_key("primary_replica_tag".to_string());
+    opts_d.set_val(prims_term);
+    
+
+    let mut datum_term = Term::new();
+    datum_term.set_field_type(Term_TermType::DATUM);
+    datum_term.set_datum(table_crate_datum);
+
     let mut table_create_term = Term::new();
     table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
-    table_create_term.set_datum(table_crate_datum);
-
-    let vec_args = vec![db_term];
-    let args = ::protobuf::RepeatedField::from_vec(vec_args);
-    table_create_term.set_args(args);
+    table_create_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_term, datum_term]));
+    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c, opts_d]));
 
 
     let mut query = Query::new();
     query.set_field_type(Query_QueryType::START);
-    query.set_token(1i64);
+    query.set_token(2i64);
     query.set_query(table_create_term);
+    query.set_accepts_r_json(true);
+    println!("{}", query.compute_size());
 
-    let mut stream = TcpStream::connect(("localhost", 28015)).ok().unwrap();
-    let mut writer = ::protobuf::stream::CodedOutputStream::new(&mut stream);
 
-    query.write_to_with_cached_sizes(&mut writer);
+    {//let mut stream = TcpStream::connect(("localhost", 28015)).ok().unwrap();
+    
+        let mut writer = ::protobuf::stream::CodedOutputStream::new(&mut conn.stream);
+
+        query.write_to_with_cached_sizes(&mut writer);
+    }
+    conn.stream.flush();
+
+    let mut res = Response::new();
+    let mut reader = ::protobuf::stream::CodedInputStream::new(&mut conn.stream);
+    res.merge_from(&mut reader);
+    println!("$$$$$$$$${:?}", res.get_field_type());
+    println!("$$$$$$$$${:?}", res.get_response().len());
 
 
 
