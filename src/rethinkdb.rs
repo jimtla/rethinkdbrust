@@ -82,6 +82,7 @@ macro_rules! datum { //TODO: reduce repetition
             let mut datum = Datum::new();
             datum.set_field_type(Datum_DatumType::R_NUM);
             datum.set_r_num($value);
+            datum.compute_size();
             datum
     }};
 
@@ -89,6 +90,7 @@ macro_rules! datum { //TODO: reduce repetition
             let mut datum = Datum::new();
             datum.set_field_type(Datum_DatumType::R_STR);
             datum.set_r_str($value.clone());
+            datum.compute_size();
             datum
     }};
 
@@ -228,14 +230,13 @@ impl Connection {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::PROTOBUF as u32);
         self.stream.flush();
         
-        // let mut recv = Vec::new();
-        // let null_s = b"\0"[0];
-        // self.stream.read_until(null_s, &mut recv);
+        let mut res = Response::new();
+        let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
+        res.merge_from(&mut reader);
+        println!("$$$$$$$$${:?}", res.get_field_type());
+        println!("$$$$$$$$${:?}", res.get_response().len());
 
-        // match recv.pop() {
-        //     Some(null_s) => println!("{:?}", "OK, foi\n"),
-        //     _ => panic!("{:?}", "Unable to connect\n")
-        // }
+
     }
 
 }
@@ -259,30 +260,13 @@ fn test_connect() {
     // //let qd = db.table_create("person").to_query_types();
     let tc = db.table_create("person"); //.run(&mut conn);
 
-    // let mut db_datum = Datum::new();
-    // db_datum.set_field_type(Datum_DatumType::R_STR);
-    // db_datum.set_r_str("test".to_string());
-    // db_datum.compute_size();
-
-    // let mut db_datum_term = Term::new();
-    // db_datum_term.set_field_type(Term_TermType::DATUM);
-    // db_datum_term.set_datum(db_datum);
-    // db_datum_term.compute_size();
-    
-    // let mut db_term = Term::new();
-    // db_term.set_field_type(Term_TermType::DB);
-    // db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
-    // db_term.compute_size();
-
-
-
-
+ 
     let mut query = Query::new();
     query.set_field_type(Query_QueryType::START);
     query.set_token(2i64);
     query.set_query(tc.to_query_types());
     query.set_accepts_r_json(false);
-    println!("{}", query.compute_size());
+    println!("Tamanho query: {}", query.compute_size());
 
 
     {
@@ -300,18 +284,6 @@ fn test_connect() {
     println!("$$$$$$$$${:?}", res.get_field_type());
     println!("$$$$$$$$${:?}", res.get_response().len());
 
-
-
-    //print!("{:?}", json::encode(&qd.to_json()));
-
-    // let db = QueryTypes::Query(Term_TermType::DB, vec![QueryTypes::Data("FOO".to_string())]);
-    // let table = QueryTypes::Query(Term_TermType::TABLE, vec!(db, QueryTypes::Data("users".to_string())));
-    // let filter = QueryTypes::Query(Term_TermType::FILTER, vec![table, QueryTypes::Data("{name : \"Paulo\"}".to_string())]);
-    // print!("\n{:?}", json::encode(&filter.to_json()).unwrap());
-
     assert_eq!(1,2);
-    //conn.db("foo").insert(person).run();
-
-
 
 }
