@@ -77,25 +77,116 @@ trait RQLQuery<'a> {
 
         true
     }
-    fn to_query_types(&'a self) -> QueryTypes;
+    fn to_query_types(&'a self) -> Term;
 
 }
 
 
+macro_rules! datum { //TODO: reduce repetition
+    (NUM => $value:expr) => {{
+            let mut datum = Datum::new();
+            datum.set_field_type(Datum_DatumType::R_NUM);
+            datum.set_r_num($value);
+            datum
+    }};
+
+    (STR => $value:expr) => {{
+            let mut datum = Datum::new();
+            datum.set_field_type(Datum_DatumType::R_STR);
+            datum.set_r_str($value.clone());
+            datum
+    }};
+
+}
+
+
+#[macro_export]
+macro_rules! term_datum {
+    ($datum:expr) => {{
+        let mut datum_term = Term::new();
+        datum_term.set_field_type(Term_TermType::DATUM);
+        datum_term.set_datum($datum);
+        datum_term.compute_size();
+        datum_term
+    }};
+    (STR => $value:expr) => {{
+       
+        let mut datum = datum!(STR => $value);
+        term_datum!(datum)
+
+    }};
+
+    (NUM => $value:expr) => {{
+       
+        let mut datum = datum!(NUM => $value); // uses forwarded type
+        term_datum!(datum)
+
+
+    }};
+
+
+}
+
+macro_rules! term_assoc_pair {
+    ($key:expr, $val:expr) => {{
+        let mut pair = Term_AssocPair::new();
+        pair.set_key($key.to_string());
+        pair.set_val($val);
+        pair.compute_size();
+        pair
+
+    }};
+}
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
-    fn to_query_types(&'a self) -> QueryTypes {
-        let args : BTreeMap<String, json::Json> = BTreeMap::new();
-        QueryTypes::QueryWithArgs(self.term, 
-                                  vec![self.db.to_query_types(), 
-                                       QueryTypes::Data(self.name.clone())], 
-                                  args)
+    fn to_query_types(&'a self) -> Term {
+    
+    //    let table_crate_datum = str_datum!(self.name);
+
+    // let mut table_crate_datum = Datum::new();
+    // table_crate_datum.set_field_type(Datum_DatumType::R_STR);
+    // table_crate_datum.set_r_str(self.name.clone());
+    // table_crate_datum.compute_size();
+
+    let mut primary_key_term = term_datum!(STR => "id".to_string());
+    let mut shars_term = term_datum!(NUM => 1f64);
+    let mut reps_term = term_datum!(NUM => 1f64);
+    let mut prims_term = term_datum!(STR => "X".to_string());
+
+    let mut opts_a = term_assoc_pair!("primary_key", primary_key_term);
+    let mut opts_b = term_assoc_pair!("shards", shars_term);
+    let mut opts_c = term_assoc_pair!("replicas", reps_term);
+    let mut opts_d = term_assoc_pair!("primary_replica_tag", prims_term);
+  
+
+    let table_create_datum_term = term_datum!(STR => self.name);
+
+    let mut table_create_term = Term::new();
+    table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
+    table_create_term.set_args(::protobuf::RepeatedField::from_vec(vec![self.db.to_query_types(), table_create_datum_term]));
+    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c]));
+    table_create_term.compute_size();
+    table_create_term
     }
 }
 
 
 impl<'a> RQLQuery<'a> for Db {
-    fn to_query_types(&'a self) -> QueryTypes {
-        QueryTypes::Query(self.term, vec![QueryTypes::Data(self.name.clone())])
+    fn to_query_types(&'a self) -> Term {
+        let mut db_datum = Datum::new();
+        db_datum.set_field_type(Datum_DatumType::R_STR);
+        db_datum.set_r_str(self.name.clone());
+        db_datum.compute_size();
+
+        let mut db_datum_term = Term::new();
+        db_datum_term.set_field_type(Term_TermType::DATUM);
+        db_datum_term.set_datum(db_datum);
+        db_datum_term.compute_size();
+    
+        let mut db_term = Term::new();
+        db_term.set_field_type(Term_TermType::DB);
+        db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
+        db_term.compute_size();
+        db_term
     }
 }
 
@@ -186,110 +277,33 @@ fn test_connect() {
     // };
     
     let mut conn = Connection::connect("localhost", 7888, "");
-    // let db = db("test");
+    let db = db("test");
     // assert_eq!("db", db.stm);
     // //let qd = db.table_create("person").to_query_types();
-    // db.table_create("person").run(&mut conn);
+    let tc = db.table_create("person"); //.run(&mut conn);
 
-    let mut db_datum = Datum::new();
-    db_datum.set_field_type(Datum_DatumType::R_STR);
-    db_datum.set_r_str("test".to_string());
-    db_datum.compute_size();
+    // let mut db_datum = Datum::new();
+    // db_datum.set_field_type(Datum_DatumType::R_STR);
+    // db_datum.set_r_str("test".to_string());
+    // db_datum.compute_size();
 
-    let mut db_datum_term = Term::new();
-    db_datum_term.set_field_type(Term_TermType::DATUM);
-    db_datum_term.set_datum(db_datum);
-    db_datum_term.compute_size();
+    // let mut db_datum_term = Term::new();
+    // db_datum_term.set_field_type(Term_TermType::DATUM);
+    // db_datum_term.set_datum(db_datum);
+    // db_datum_term.compute_size();
     
-    let mut db_term = Term::new();
-    db_term.set_field_type(Term_TermType::DB);
-    db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
-    db_term.compute_size();
-
-    let mut table_crate_datum = Datum::new();
-    table_crate_datum.set_field_type(Datum_DatumType::R_STR);
-    table_crate_datum.set_r_str("animals".to_string());
-    table_crate_datum.compute_size();
-
-    let mut primary_key_datum = Datum::new();
-    primary_key_datum.set_field_type(Datum_DatumType::R_STR);
-    primary_key_datum.set_r_str("id".to_string());
-    primary_key_datum.compute_size();
-
-    let mut primary_key_term = Term::new();
-    primary_key_term.set_field_type(Term_TermType::DATUM);
-    primary_key_term.set_datum(primary_key_datum);
-    primary_key_term.compute_size();
+    // let mut db_term = Term::new();
+    // db_term.set_field_type(Term_TermType::DB);
+    // db_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_datum_term]));
+    // db_term.compute_size();
 
 
-    let mut shars_datum = Datum::new();
-    shars_datum.set_field_type(Datum_DatumType::R_NUM);
-    shars_datum.set_r_num(1f64);
-    shars_datum.compute_size();
-
-    let mut shars_term = Term::new();
-    shars_term.set_field_type(Term_TermType::DATUM);
-    shars_term.set_datum(shars_datum);
-    shars_term.compute_size();
-
-    let mut reps_datum = Datum::new();
-    reps_datum.set_field_type(Datum_DatumType::R_NUM);
-    reps_datum.set_r_num(1f64);
-    reps_datum.compute_size();
-    
-    let mut reps_term = Term::new();
-    reps_term.set_field_type(Term_TermType::DATUM);
-    reps_term.set_datum(reps_datum);
-    reps_term.compute_size();
-
-
-    let mut prims_datum = Datum::new();
-    prims_datum.set_field_type(Datum_DatumType::R_STR);
-    prims_datum.set_r_str("x".to_string());
-    prims_datum.compute_size();
-
-    let mut prims_term = Term::new();
-    prims_term.set_field_type(Term_TermType::DATUM);
-    prims_term.set_datum(prims_datum);
-    prims_term.compute_size();
-
-    let mut opts_a = Term_AssocPair::new();
-    opts_a.set_key("primary_key".to_string());
-    opts_a.set_val(primary_key_term);
-    opts_a.compute_size();
-    
-    let mut opts_b = Term_AssocPair::new();
-    opts_b.set_key("shards".to_string());
-    opts_b.set_val(shars_term);
-    opts_b.compute_size();
-
-    let mut opts_c = Term_AssocPair::new();
-    opts_c.set_key("replicas".to_string());
-    opts_c.set_val(reps_term);
-    opts_c.compute_size();
-    
-    let mut opts_d = Term_AssocPair::new();
-    opts_d.set_key("primary_replica_tag".to_string());
-    opts_d.set_val(prims_term);
-    opts_d.compute_size();
-    
-
-    let mut datum_term = Term::new();
-    datum_term.set_field_type(Term_TermType::DATUM);
-    datum_term.set_datum(table_crate_datum);
-    datum_term.compute_size();
-
-    let mut table_create_term = Term::new();
-    table_create_term.set_field_type(Term_TermType::TABLE_CREATE);
-    table_create_term.set_args(::protobuf::RepeatedField::from_vec(vec![db_term, datum_term]));
-    table_create_term.set_optargs(::protobuf::RepeatedField::from_vec(vec![opts_a, opts_b, opts_c]));
-    table_create_term.compute_size();
 
 
     let mut query = Query::new();
     query.set_field_type(Query_QueryType::START);
     query.set_token(2i64);
-    query.set_query(table_create_term);
+    query.set_query(tc.to_query_types());
     query.set_accepts_r_json(false);
     println!("{}", query.compute_size());
 
