@@ -51,26 +51,7 @@ fn db(name : &str) -> Db {
 trait RQLQuery<'a> {
 
     fn run(&'a self, conn : &mut Connection) -> bool {
-        // let query = self.to_query_types();
-        // let token = 5u64;
-        // let as_json = json::encode(&query.to_json()).unwrap();
-        // print!("{:?}, {:?}, {:?}", token, as_json.len().to_u32().unwrap(), as_json);
-        // conn.stream.write_u64::<LittleEndian>(token);
-        // conn.stream.write_u32::<LittleEndian>(as_json.len().to_u32().unwrap());
-        // //conn.stream.write(json_bytes);
-        // write!(conn.stream, "{:?}", as_json);
-        // conn.stream.flush();
-
-        // let mut recv = Vec::new();
-        // //unsafe { recv.set_len(12) };
-        // let null_s = b"}"[0];
-        // conn.stream.read_until(null_s, &mut recv);
-
-        // match recv.pop() {
-        //     Some(null_s) => println!("{:?}, {:?}", "CRIOU TABEL, foi\n", String::from_utf8(recv)),
-        //     _ => panic!("{:?}", "Unable to connect\n")
-        // }
-
+        conn.send(Json::Array(vec![Json::I64(1), self.to_query_types()]));
         true
     }
     fn to_query_types(&'a self) -> json::Json;
@@ -164,6 +145,24 @@ impl Connection {
 
     }
 
+    fn send(&mut self, json : Json) {
+
+        self.stream.write_i64::<LittleEndian>(1i64);
+        let message = json.to_string();
+        let len = message.len();
+        self.stream.write_i32::<LittleEndian>(len as i32);
+        println!("{}",message);
+        write!(self.stream, "{}", message);
+
+
+        let mut res = Response::new();
+        let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
+        res.merge_from(&mut reader);
+        println!("$$$$$$$$${:?}", res.get_field_type());
+        println!("$$$$$$$$${:?}", res.get_response().len());
+
+    }
+
 }
 
     use ::protobuf::Message;
@@ -181,25 +180,8 @@ fn test_connect() {
     
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
-    // assert_eq!("db", db.stm);
-    // //let qd = db.table_create("person").to_query_types();
-    let tc = db.table_create("person"); //.run(&mut conn);
-    
-    conn.stream.write_i64::<LittleEndian>(1i64);
-    let json_query = tc.to_query_types();
-    let message = Json::Array(vec![Json::I64(1), json_query]).to_string();
-    let len = message.len();
-    conn.stream.write_i32::<LittleEndian>(len as i32);
-    println!("{}",message);
-    write!(conn.stream, "{}", message);
-
-
-    let mut res = Response::new();
-    let mut reader = ::protobuf::stream::CodedInputStream::new(&mut conn.stream);
-    res.merge_from(&mut reader);
-    println!("$$$$$$$$${:?}", res.get_field_type());
-    println!("$$$$$$$$${:?}", res.get_response().len());
-
+    assert_eq!("db", db.stm);
+    let tc = db.table_create("person").run(&mut conn); 
     assert_eq!(1,2);
 
 }
