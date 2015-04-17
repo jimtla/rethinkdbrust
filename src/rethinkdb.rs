@@ -12,11 +12,6 @@ use std::num::ToPrimitive;
 use std::string::String;
 use std::collections::BTreeMap;
 
-enum QueryTypes {
-    Query(Term_TermType, Vec<QueryTypes>),
-    QueryWithArgs(Term_TermType, Vec<QueryTypes>, BTreeMap<String, json::Json>),
-    Data(String)
-}
 
 /* Structs to manage databse */
 pub struct Connection {
@@ -192,29 +187,6 @@ impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> Term {
         let mut db_datum_term = term_datum!(STR => self.name);
         term_query!(Term_TermType::DB, vec![db_datum_term])
-    }
-}
-
-impl ToJson for QueryTypes {
-    fn to_json(&self) -> Json {
-        match *self  {
-            QueryTypes::QueryWithArgs(t, ref v, ref a) => {
-                let child = v.to_json();
-                let mut me = Vec::new();
-                me.push(Json::U64(t as u64));
-                me.push(child);
-                me.push(a.to_json());
-                Json::Array(me)
-            }
-            QueryTypes::Query(t, ref v) => { 
-                let child = v.to_json();
-                let mut me = Vec::new();
-                me.push(Json::U64(t as u64));
-                me.push(child);
-                Json::Array(me)
-            }
-            QueryTypes::Data(ref s) => Json::String(s.clone())
-        }
     }
 }
 
