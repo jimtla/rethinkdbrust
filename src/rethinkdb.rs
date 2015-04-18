@@ -201,6 +201,8 @@ impl Connection {
 }
 
     use ::protobuf::Message;
+
+// socat  -v -x TCP4-LISTEN:7888,fork,reuseaddr TCP4:localhost:28015
 #[test]
 fn test_connect() {
     // struct Person {
