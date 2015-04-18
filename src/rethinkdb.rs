@@ -12,6 +12,35 @@ use std::num::ToPrimitive;
 use std::string::String;
 use std::collections::BTreeMap;
 
+macro_rules! json_array {
+    ( $( $e:expr ),* )  => {{
+        let mut a = Vec::new();
+        $(
+            a.push($e);
+        )*
+        Json::Array(a)
+    }}
+}
+
+macro_rules! json_string {
+    ($s:expr) => { Json::String($s.clone()) }
+}
+
+macro_rules! json_opts {
+    ( $( $k:expr => $v:expr),* ) => {{
+        let mut d = BTreeMap::new();
+        $(
+            d.insert($k.to_string(), $v);
+        )*
+        Json::Object(d)
+        
+
+    }}
+}
+
+macro_rules! json_i64 {
+    ($s:expr) => { Json::I64($s) }
+}
 
 
 /* Structs to manage databse */
@@ -72,44 +101,38 @@ trait RQLQuery<'a> {
 
 }
 
-
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> json::Json {
 
-        let mut j = Vec::new();
-        j.push(Json::I64(self.term as i64));
-
-        let mut jd = Vec::new();
-        jd.push(self.db.to_query_types());
-        jd.push(Json::String(self.name.clone()));
-
-        let mut d = BTreeMap::new();
-        d.insert("primary_key".to_string(), Json::String("id".to_string()));
-        d.insert("shards".to_string(), Json::I64(1 as i64));
-        d.insert("replicas".to_string(), Json::I64(1 as i64));
-        j.push(Json::Array(jd));
-        j.push(Json::Object(d));
-        Json::Array(j)
-
+        json_array![
+            Json::I64(self.term as i64),
+            json_array![
+                self.db.to_query_types(),
+                json_string!(self.name.clone())
+            ],
+            json_opts![ 
+                   "primary_key" => json_string!("id".to_string()),
+                   "shards"      => json_i64!(1 as i64),
+                   "replicas"    => json_i64!(1 as i64)]
+        ]
+ 
     }
 }
 
 impl<'a> RQLQuery<'a> for Table<'a> {
     fn to_query_types(&'a self) -> json::Json {
 
-        let mut j = Vec::new();
-        j.push(Json::I64(self.term as i64));
-
-        let mut jd = Vec::new();
-        jd.push(self.db.to_query_types());
-        jd.push(Json::String(self.name.clone()));
-
-        let mut d = BTreeMap::new();
-        d.insert("use_outdated".to_string(), Json::Boolean(true));//TODO use outdated?
-        d.insert("identifier_format".to_string(), Json::String("name".to_string()));
-        j.push(Json::Array(jd));
-        j.push(Json::Object(d));
-        Json::Array(j)
+        json_array![
+            json_i64!(self.term as i64),
+            json_array![
+                self.db.to_query_types(),
+                json_string!(self.name.clone())
+            ],
+            json_opts![
+                "use_outdated" => Json::Boolean(true),
+                "identifier_format".to_string() => json_string!("name".to_string())
+            ]
+        ]
 
     }
 }
@@ -138,18 +161,13 @@ impl<'a> RQLQuery<'a> for TableInsert<'a> {
 
 impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> json::Json {
-        // [1,[39,[[15,[[14,["blog"]],"users"]],{"name":"Michel"}]],{}]
-        // [1,[60,[[14,["test"]],"person",{"primary_key":"id","replicas":1,"shards":1}]]]
 
-        let mut j = Vec::new();
-        j.push(Json::I64(self.term as i64));
-
-        let mut jd = Vec::new();
-        jd.push(Json::String(self.name.clone()));
-        j.push(Json::Array(jd));
-
-        Json::Array(j)
-
+        json_array![
+            json_i64!(self.term as i64),
+            json_array![
+                json_string!(self.name.clone())
+            ]
+        ]
     }
 }
 
@@ -245,6 +263,9 @@ impl Connection {
 
     use ::protobuf::Message;
 
+/// MACROS
+
+
 // socat  -v -x TCP4-LISTEN:7888,fork,reuseaddr TCP4:localhost:28015
 #[test]
 fn test_connect() {
@@ -261,7 +282,7 @@ fn test_connect() {
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
     assert_eq!("db", db.stm);
-    //let tc = db.table_create("person").run(&mut conn);
+    let tc = db.table_create("person").run(&mut conn);
 
     let mut nachoData = BTreeMap::new();
     nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
@@ -271,3 +292,5 @@ fn test_connect() {
     assert_eq!(1,2);
 
 }
+
+
