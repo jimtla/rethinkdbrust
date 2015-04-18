@@ -11,6 +11,7 @@ use rustc_serialize::json::Json;
 use std::num::ToPrimitive;
 use std::string::String;
 use std::collections::BTreeMap;
+use std::str;
 
 macro_rules! json_array {
     ( $( $e:expr ),* )  => {{
@@ -338,7 +339,7 @@ impl Connection {
 
     }
 
-    fn send(&mut self, json : Json) {
+    fn send(&mut self, json : Json) -> Json {
 
         self.stream.write_i64::<LittleEndian>(1i64);
         let message = json.to_string();
@@ -346,16 +347,23 @@ impl Connection {
         self.stream.write_i32::<LittleEndian>(len as i32);
         println!("{}",message);
         write!(self.stream, "{}", message);
+        self.stream.flush();
 
-        let mut recv = Vec::new();
-        let null_s = b"\0"[0];
+        //Read result. Should go into a different method?
+
+        let recv_token = self.stream.read_i64::<LittleEndian>().ok().unwrap();
+        let recv_len = self.stream.read_i32::<LittleEndian>().ok().unwrap();
+
         let mut buf = BufStream::new(&self.stream);
-        buf.read_until(null_s, &mut recv);
+        
+        let mut c = Vec::with_capacity(recv_len as usize);
+        buf.read(&mut c);
+        let json_recv = str::from_utf8(&c).ok().unwrap();
 
-        match recv.pop() {
-            Some(null_s) => print!("{:?}", "OK, foi"),
-            _ => print!("{:?}", "Unable to connect")
-        }
+        
+        let mut recv_json = json::Json::from_str(json_recv);
+        println!("{:?}", json_recv);
+        recv_json.ok().unwrap()
 
 
         // let mut res = Response::new();
@@ -389,13 +397,6 @@ fn test_insert() {
     let db = db("test");
     let tc = db.table("person").insert(nachoData).run(&mut conn);
 
-}
-
-#[test]
-fn test_drop() {
-    let mut conn = Connection::connect("localhost", 7888, "");
-    let db = db("test");
-    let tc = db.table_drop("person").run(&mut conn);
 }
 
 #[test]
