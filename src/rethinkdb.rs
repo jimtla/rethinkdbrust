@@ -100,7 +100,10 @@ pub struct TableInsert<'a> {
     term    : Term_TermType,
     stm     : String,
     table   : &'a Table<'a>,
-    object  : BTreeMap<String, json::Json>
+    object  : BTreeMap<String, json::Json>,
+    conflict: String,
+    durability: String,
+    return_changes: bool
 }
 
 ///////////////////
@@ -212,8 +215,26 @@ impl<'a> TableInsert<'a> {
             term    : Term_TermType::INSERT,
             stm     : "insert".to_string(),
             table   : table,
-            object  : object
+            object  : object,
+            conflict: "update".to_string(),
+            durability: "hard".to_string(),
+            return_changes: true
         }
+    }
+
+    fn conflict(&mut self, value: &str) -> &TableInsert<'a> {
+        self.conflict = value.to_string();
+        self
+    }
+
+    fn durability(&mut self, value: &str) -> &TableInsert<'a> {
+        self.conflict = value.to_string();
+        self
+    }
+
+    fn return_changes(&mut self, value: bool) -> &TableInsert<'a> {
+        self.return_changes = value;
+        self
     }
 }
 
@@ -335,9 +356,5 @@ fn test_insert() {
     let db = db("test");
     let tc = db.table("person").insert(nachoData).run(&mut conn);
 
-    println!("{:?}", nachoData);
-
     assert_eq!(1,2);
-
-
 }
