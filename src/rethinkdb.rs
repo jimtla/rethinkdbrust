@@ -61,8 +61,33 @@ pub struct TableCreate<'a> {
     term : Term_TermType,
     stm  : String,
     db   : &'a Db,
-    name : String
+    name : String,
+    primary_key : String,
+    replicas : i32,
+    shards   : i32,
+    primary_replica_tag : String
 }
+
+impl<'a> TableCreate<'a> {
+    fn new(db : &'a Db, name : &str) -> TableCreate<'a> {
+        TableCreate {
+            term : Term_TermType::TABLE_CREATE,
+            stm  : "table_create".to_string(),
+            db   : db,
+            name : name.to_string(),
+            primary_key : "id".to_string(),
+            replicas    : 1i32,
+            shards      : 1i32,
+            primary_replica_tag : "".to_string()
+        }
+    }
+
+    fn replicas(&mut self, total : i32) {
+        self.replicas = total;
+    }
+}
+
+
 
 pub struct Table<'a> {//TODO criar um so struct ( Command? )
     term : Term_TermType,
@@ -111,9 +136,10 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
                 json_string!(self.name.clone())
             ],
             json_opts![ 
-                   "primary_key" => json_string!("id".to_string()),
-                   "shards"      => json_i64!(1 as i64),
-                   "replicas"    => json_i64!(1 as i64)]
+                   "primary_key" => json_string!(self.primary_key.clone()),
+                   "shards"      => json_i64!(self.shards as i64),
+                   "replicas"    => json_i64!(self.replicas as i64)] 
+                   // TODO LAST PARAM PENDING : TAG
         ]
  
     }
@@ -187,17 +213,10 @@ impl<'a> Table<'a> {
 
 impl Db {
     pub fn table_create (&self, name : &str) -> TableCreate {
-        let db = Rc::new(self);
-        TableCreate {
-            term : Term_TermType::TABLE_CREATE,
-            stm  : "table_create".to_string(),
-            db   : self,
-            name : name.to_string()
-        }
+        TableCreate::new(self, name)
     }
 
     pub fn table (&self, name : &str) -> Table {
-        let db = Rc::new(self);
         Table {
             term : Term_TermType::TABLE,
             stm  : "table".to_string(),
@@ -261,11 +280,6 @@ impl Connection {
 
 }
 
-    use ::protobuf::Message;
-
-/// MACROS
-
-
 // socat  -v -x TCP4-LISTEN:7888,fork,reuseaddr TCP4:localhost:28015
 #[test]
 fn test_connect() {
@@ -284,13 +298,18 @@ fn test_connect() {
     assert_eq!("db", db.stm);
     let tc = db.table_create("person").run(&mut conn);
 
-    let mut nachoData = BTreeMap::new();
-    nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
-    nachoData.insert("age".to_string(), Json::I64(6i64));
-
-    let tc = db.table("person").insert(nachoData).run(&mut conn);
-    assert_eq!(1,2);
-
 }
+// #[test]
+// fn test_insert() {
+//     let mut conn = Connection::connect("localhost", 7888, "");
+//     let mut nachoData = BTreeMap::new();
+//     nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
+//     nachoData.insert("age".to_string(), Json::I64(6i64));
+//     let db = db("test");
+//     let tc = db.table("person").insert(nachoData).run(&mut conn);
+//     assert_eq!(1,2);
+
+
+// }
 
 
