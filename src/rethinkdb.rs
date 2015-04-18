@@ -105,7 +105,7 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> json::Json {
 
         json_array![
-            Json::I64(self.term as i64),
+            Json::I64(self.term.clone() as i64),
             json_array![
                 self.db.to_query_types(),
                 json_string!(self.name.clone())
@@ -123,7 +123,7 @@ impl<'a> RQLQuery<'a> for Table<'a> {
     fn to_query_types(&'a self) -> json::Json {
 
         json_array![
-            json_i64!(self.term as i64),
+            json_i64!(self.term.clone() as i64),
             json_array![
                 self.db.to_query_types(),
                 json_string!(self.name.clone())
@@ -141,7 +141,7 @@ impl<'a> RQLQuery<'a> for TableInsert<'a> {
     fn to_query_types(&'a self) -> json::Json {
 
         let mut j = Vec::new();
-        j.push(Json::I64(self.term as i64));
+        j.push(Json::I64(self.term.clone() as i64));
 
         let mut jd = Vec::new();
         jd.push(self.table.to_query_types());
@@ -163,7 +163,7 @@ impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> json::Json {
 
         json_array![
-            json_i64!(self.term as i64),
+            json_i64!(self.term.clone() as i64),
             json_array![
                 json_string!(self.name.clone())
             ]
@@ -232,11 +232,11 @@ impl Connection {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
         self.stream.flush();
 
-        let mut res = Response::new();
-        let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
-        res.merge_from(&mut reader);
-        println!("$$$$$$$$${:?}", res.get_field_type());
-        println!("$$$$$$$$${:?}", res.get_response().len());
+        // let mut res = Response::new();
+        // let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
+        // res.merge_from(&mut reader);
+        // println!("$$$$$$$$${:?}", res.get_field_type());
+        // println!("$$$$$$$$${:?}", res.get_response().len());
 
 
     }
@@ -251,11 +251,11 @@ impl Connection {
         write!(self.stream, "{}", message);
 
 
-        let mut res = Response::new();
-        let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
-        res.merge_from(&mut reader);
-        println!("$$$$$$$$${:?}", res.get_field_type());
-        println!("$$$$$$$$${:?}", res.get_response().len());
+        // let mut res = Response::new();
+        // let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
+        // res.merge_from(&mut reader);
+        // println!("$$$$$$$$${:?}", res.get_field_type());
+        // println!("$$$$$$$$${:?}", res.get_response().len());
 
     }
 
