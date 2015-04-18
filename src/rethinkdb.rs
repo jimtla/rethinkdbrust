@@ -35,11 +35,18 @@ pub struct TableCreate<'a> {
     name : String
 }
 
-pub struct Table<'a> {//criar um so struct ( Command? )
+pub struct Table<'a> {//TODO criar um so struct ( Command? )
     term : Term_TermType,
     stm  : String,
     db   : &'a Db,
     name : String
+}
+
+pub struct TableInsert<'a> {
+    term    : Term_TermType,
+    stm     : String,
+    table   : &'a Table<'a>,
+    object  : BTreeMap<String, json::Json>
 }
 
 ///////////////////
@@ -99,7 +106,29 @@ impl<'a> RQLQuery<'a> for Table<'a> {
 
         let mut d = BTreeMap::new();
         d.insert("use_outdated".to_string(), Json::Boolean(true));//TODO use outdated?
-        d.insert("identifier_format".to_string(), Json::String(self.name.clone()));
+        d.insert("identifier_format".to_string(), Json::String("name".to_string()));
+        j.push(Json::Array(jd));
+        j.push(Json::Object(d));
+        Json::Array(j)
+
+    }
+}
+
+impl<'a> RQLQuery<'a> for TableInsert<'a> {
+    fn to_query_types(&'a self) -> json::Json {
+
+        let mut j = Vec::new();
+        j.push(Json::I64(self.term as i64));
+
+        let mut jd = Vec::new();
+        jd.push(self.table.to_query_types());
+
+        jd.push(Json::Object(self.object.clone()));
+
+        let mut d = BTreeMap::new();
+        d.insert("conflict".to_string(), Json::String("update".to_string()));
+        d.insert("durability".to_string(), Json::String("hard".to_string()));//?
+        d.insert("return_changes".to_string(), Json::Boolean(true));//?
         j.push(Json::Array(jd));
         j.push(Json::Object(d));
         Json::Array(j)
@@ -121,6 +150,20 @@ impl<'a> RQLQuery<'a> for Db {
 
         Json::Array(j)
 
+    }
+}
+
+
+impl<'a> Table<'a> {
+
+    pub fn insert (&'a self, object : BTreeMap<String, json::Json>) -> TableInsert {
+        let db = Rc::new(self);
+        TableInsert {
+            term    : Term_TermType::INSERT,
+            stm     : "insert".to_string(),
+            table   : self,
+            object  : object
+        }
     }
 }
 
@@ -218,8 +261,13 @@ fn test_connect() {
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
     assert_eq!("db", db.stm);
-    let tc = db.table_create("person").run(&mut conn);
-    let tc = db.table("person").run(&mut conn);
+    //let tc = db.table_create("person").run(&mut conn);
+
+    let mut nachoData = BTreeMap::new();
+    nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
+    nachoData.insert("age".to_string(), Json::I64(6i64));
+
+    let tc = db.table("person").insert(nachoData).run(&mut conn);
     assert_eq!(1,2);
 
 }
