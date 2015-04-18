@@ -328,6 +328,9 @@ fn test_insert() {
     nachoData.insert("age".to_string(), Json::I64(6i64));
     let db = db("test");
     let tc = db.table("person").insert(nachoData).run(&mut conn);
+
+    println!("{:?}", nachoData);
+
     assert_eq!(1,2);
 
 
