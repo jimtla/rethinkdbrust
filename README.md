@@ -10,14 +10,14 @@ This is a very early stage WIP driver for json protocol. Compatible with Rust be
     let db = db("test");
     let tc = db.table_create("person_create").replicas(1i32).run(&mut conn);
 
-    //
+    // Inserting data
     struct Person {
     	name : String,
     	age  : u32,
     }
     let nacho = Person{name : "nacho".to_string(), age : 6};
 
-    db("test").table("person").insert(json::encode(nacho).run(&mut conn);
+    db("test").table("person").insert(json::encode(nacho)).run(&mut conn);
 
 
 ````
