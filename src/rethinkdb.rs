@@ -251,6 +251,16 @@ impl Connection {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
         self.stream.flush();
 
+        let mut recv = Vec::new();
+        let null_s = b"\0"[0];
+        let mut buf = BufStream::new(&self.stream);
+        buf.read_until(null_s, &mut recv);
+
+        match recv.pop() {
+            Some(null_s) => print!("{:?}", "OK, foi"),
+            _ => print!("{:?}", "Unable to connect")
+        }
+
         // let mut res = Response::new();
         // let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
         // res.merge_from(&mut reader);
@@ -268,6 +278,16 @@ impl Connection {
         self.stream.write_i32::<LittleEndian>(len as i32);
         println!("{}",message);
         write!(self.stream, "{}", message);
+
+        let mut recv = Vec::new();
+        let null_s = b"\0"[0];
+        let mut buf = BufStream::new(&self.stream);
+        buf.read_until(null_s, &mut recv);
+
+        match recv.pop() {
+            Some(null_s) => print!("{:?}", "OK, foi"),
+            _ => print!("{:?}", "Unable to connect")
+        }
 
 
         // let mut res = Response::new();
@@ -297,6 +317,7 @@ fn test_connect() {
     let db = db("test");
     assert_eq!("db", db.stm);
     let tc = db.table_create("person").run(&mut conn);
+    assert_eq!(1, 2);
 
 }
 // #[test]
