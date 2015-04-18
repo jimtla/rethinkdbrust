@@ -320,17 +320,17 @@ fn test_connect() {
     assert_eq!(1, 2);
 
 }
-// #[test]
-// fn test_insert() {
-//     let mut conn = Connection::connect("localhost", 7888, "");
-//     let mut nachoData = BTreeMap::new();
-//     nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
-//     nachoData.insert("age".to_string(), Json::I64(6i64));
-//     let db = db("test");
-//     let tc = db.table("person").insert(nachoData).run(&mut conn);
-//     assert_eq!(1,2);
+#[test]
+fn test_insert() {
+    let mut conn = Connection::connect("localhost", 7888, "");
+    let mut nachoData = BTreeMap::new();
+    nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
+    nachoData.insert("age".to_string(), Json::I64(6i64));
+    let db = db("test");
+    let tc = db.table("person").insert(nachoData).run(&mut conn);
+    assert_eq!(1,2);
 
 
-// }
+}
 
 
