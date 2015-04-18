@@ -68,6 +68,25 @@ pub struct TableCreate<'a> {
     primary_replica_tag : String
 }
 
+pub struct TableDrop<'a> {
+    term : Term_TermType,
+    stm  : String,
+    db   : &'a Db,
+    name : String
+}
+
+impl<'a> TableDrop<'a> {
+    fn new(db : &'a Db, name : &str) -> TableDrop<'a> {
+        TableDrop {
+            term : Term_TermType::TABLE_DROP,
+            stm  : "table_drop".to_string(),
+            db   : db,
+            name : name.to_string()
+        }
+    }
+}
+
+
 impl<'a> TableCreate<'a> {
     fn new(db : &'a Db, name : &str) -> TableCreate<'a> {
         TableCreate {
@@ -82,8 +101,14 @@ impl<'a> TableCreate<'a> {
         }
     }
 
-    fn replicas(&mut self, total : i32) {
+    fn replicas(&'a mut self, total : i32) -> &mut TableCreate<'a> {
         self.replicas = total;
+        self
+    }
+
+    fn shards(&'a mut self, total : i32) -> &mut TableCreate<'a> {
+        self.shards = total;
+        self
     }
 }
 
@@ -127,6 +152,18 @@ trait RQLQuery<'a> {
     }
     fn to_query_types(&'a self) -> json::Json;
 
+}
+
+impl<'a> RQLQuery<'a> for TableDrop<'a> {
+    fn to_query_types(&'a self) -> json::Json {
+        json_array![
+            json_i64!(self.term.clone() as i64),
+            json_array![
+                self.db.to_query_types(),
+                json_string!(self.name.clone())
+            ]
+        ]
+    }
 }
 
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
@@ -251,6 +288,10 @@ impl Db {
             name : name.to_string()
         }
     }
+
+    pub fn table_drop(&self, name : &str) -> TableDrop {
+        TableDrop::new(self, name)
+    }
 }
 
 
@@ -329,12 +370,12 @@ impl Connection {
 
 // socat  -v -x TCP4-LISTEN:7888,fork,reuseaddr TCP4:localhost:28015
 #[test]
-fn test_connect() {
-
+fn test_create() {
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
     assert_eq!("db", db.stm);
-    let tc = db.table_create("person").run(&mut conn);
+    let tc = db.table_create("person_create").replicas(1i32).run(&mut conn);
+    let td = db.table_drop("person_create").run(&mut conn);
     assert_eq!(1, 2);
 
 }
@@ -348,7 +389,13 @@ fn test_insert() {
     let db = db("test");
     let tc = db.table("person").insert(nachoData).run(&mut conn);
 
-    assert_eq!(1,2);
+}
+
+#[test]
+fn test_drop() {
+    let mut conn = Connection::connect("localhost", 7888, "");
+    let db = db("test");
+    let tc = db.table_drop("person").run(&mut conn);
 }
 
 #[test]

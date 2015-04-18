@@ -1,4 +1,5 @@
 
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum VersionDummy_Version {
     V0_1 = 1063369270,
@@ -7,13 +8,14 @@ pub enum VersionDummy_Version {
     V0_4 = 1074539808,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum VersionDummy_Protocol {
     PROTOBUF = 656407617,
     JSON = 2120839367,
 }
 
-
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum Query_QueryType {
     START = 1,
@@ -23,7 +25,7 @@ pub enum Query_QueryType {
 }
 
 
-
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum Frame_FrameType {
     POS = 1,
@@ -31,6 +33,7 @@ pub enum Frame_FrameType {
 }
 
 
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum Response_ResponseType {
     SUCCESS_ATOM = 1,
@@ -42,6 +45,7 @@ pub enum Response_ResponseType {
     RUNTIME_ERROR = 18,
 }
 
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum Datum_DatumType {
     R_NULL = 1,
@@ -54,7 +58,7 @@ pub enum Datum_DatumType {
 }
 
 
-
+#[allow(non_camel_case_types)]
 #[derive(Clone,PartialEq,Eq,Debug)]
 pub enum Term_TermType {
     DATUM = 1,
