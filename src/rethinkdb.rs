@@ -35,6 +35,13 @@ pub struct TableCreate<'a> {
     name : String
 }
 
+pub struct Table<'a> {//criar um so struct ( Command? )
+    term : Term_TermType,
+    stm  : String,
+    db   : &'a Db,
+    name : String
+}
+
 ///////////////////
 /* Module fns */
 fn db(name : &str) -> Db {
@@ -61,10 +68,10 @@ trait RQLQuery<'a> {
 
 impl<'a> RQLQuery<'a> for TableCreate<'a> {
     fn to_query_types(&'a self) -> json::Json {
-    
+
         let mut j = Vec::new();
         j.push(Json::I64(self.term as i64));
-        
+
         let mut jd = Vec::new();
         jd.push(self.db.to_query_types());
         jd.push(Json::String(self.name.clone()));
@@ -80,21 +87,40 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
     }
 }
 
+impl<'a> RQLQuery<'a> for Table<'a> {
+    fn to_query_types(&'a self) -> json::Json {
+
+        let mut j = Vec::new();
+        j.push(Json::I64(self.term as i64));
+
+        let mut jd = Vec::new();
+        jd.push(self.db.to_query_types());
+        jd.push(Json::String(self.name.clone()));
+
+        let mut d = BTreeMap::new();
+        d.insert("use_outdated".to_string(), Json::Boolean(true));//TODO use outdated?
+        d.insert("identifier_format".to_string(), Json::String(self.name.clone()));
+        j.push(Json::Array(jd));
+        j.push(Json::Object(d));
+        Json::Array(j)
+
+    }
+}
 
 impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> json::Json {
         // [1,[39,[[15,[[14,["blog"]],"users"]],{"name":"Michel"}]],{}]
         // [1,[60,[[14,["test"]],"person",{"primary_key":"id","replicas":1,"shards":1}]]]
-        
+
         let mut j = Vec::new();
         j.push(Json::I64(self.term as i64));
-        
+
         let mut jd = Vec::new();
         jd.push(Json::String(self.name.clone()));
         j.push(Json::Array(jd));
-        
+
         Json::Array(j)
-        
+
     }
 }
 
@@ -109,6 +135,15 @@ impl Db {
         }
     }
 
+    pub fn table (&self, name : &str) -> Table {
+        let db = Rc::new(self);
+        Table {
+            term : Term_TermType::TABLE,
+            stm  : "table".to_string(),
+            db   : self,
+            name : name.to_string()
+        }
+    }
 }
 
 
@@ -135,7 +170,7 @@ impl Connection {
         self.stream.write_u32::<LittleEndian>(0);
         self.stream.write_u32::<LittleEndian>(VersionDummy_Protocol::JSON as u32);
         self.stream.flush();
-        
+
         let mut res = Response::new();
         let mut reader = ::protobuf::stream::CodedInputStream::new(&mut self.stream);
         res.merge_from(&mut reader);
@@ -172,16 +207,17 @@ fn test_connect() {
     //     name : String,
     //     age : i8
     // };
-    
+
     // let person = Person {
     //     name : "Nacho".to_string(),
     //     age : 6
     // };
-    
+
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
     assert_eq!("db", db.stm);
-    let tc = db.table_create("person").run(&mut conn); 
+    let tc = db.table_create("person").run(&mut conn);
+    let tc = db.table("person").run(&mut conn);
     assert_eq!(1,2);
 
 }

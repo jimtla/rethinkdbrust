@@ -7,6 +7,5 @@ authors = ["abraaoisvi <abraao.isvi@gmail.com>", "paulo suzart <paulosuzart@gmai
 rustc-serialize = "*"
 byteorder = "*"
 
-
 [dependencies.protobuf]
-path = "/home/suzart/workspace/os/rust-protobuf"
+path = "../rust-protobuf"
