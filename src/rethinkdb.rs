@@ -216,13 +216,13 @@ impl<'a> TableInsert<'a> {
             stm     : "insert".to_string(),
             table   : table,
             object  : object,
-            conflict: "update".to_string(),
+            conflict: "error".to_string(),//default "error" accordingly rethinkdb documentation
             durability: "hard".to_string(),
             return_changes: true
         }
     }
 
-    fn conflict(&mut self, value: &str) -> &TableInsert<'a> {
+    fn conflict(&mut self, value: &str) -> &TableInsert<'a> {//TODO usar enum?
         self.conflict = value.to_string();
         self
     }
@@ -330,15 +330,6 @@ impl Connection {
 // socat  -v -x TCP4-LISTEN:7888,fork,reuseaddr TCP4:localhost:28015
 #[test]
 fn test_connect() {
-    // struct Person {
-    //     name : String,
-    //     age : i8
-    // };
-
-    // let person = Person {
-    //     name : "Nacho".to_string(),
-    //     age : 6
-    // };
 
     let mut conn = Connection::connect("localhost", 7888, "");
     let db = db("test");
@@ -347,6 +338,7 @@ fn test_connect() {
     assert_eq!(1, 2);
 
 }
+
 #[test]
 fn test_insert() {
     let mut conn = Connection::connect("localhost", 7888, "");
@@ -355,6 +347,18 @@ fn test_insert() {
     nachoData.insert("age".to_string(), Json::I64(6i64));
     let db = db("test");
     let tc = db.table("person").insert(nachoData).run(&mut conn);
+
+    assert_eq!(1,2);
+}
+
+#[test]
+fn test_insert_option_conflict_update() {//TODO get last inserted and try to update it
+    let mut conn = Connection::connect("localhost", 7888, "");
+    let mut nachoData = BTreeMap::new();
+    nachoData.insert("name".to_string(), Json::String("Nacho".to_string()));
+    nachoData.insert("age".to_string(), Json::I64(8i64));
+    let db = db("test");
+    let tc = db.table("person").insert(nachoData).conflict("update").run(&mut conn);
 
     assert_eq!(1,2);
 }
