@@ -33,7 +33,7 @@ macro_rules! json_opts {
             d.insert($k.to_string(), $v);
         )*
         Json::Object(d)
-        
+
 
     }}
 }
@@ -135,13 +135,13 @@ impl<'a> RQLQuery<'a> for TableCreate<'a> {
                 self.db.to_query_types(),
                 json_string!(self.name.clone())
             ],
-            json_opts![ 
+            json_opts![
                    "primary_key" => json_string!(self.primary_key.clone()),
                    "shards"      => json_i64!(self.shards as i64),
-                   "replicas"    => json_i64!(self.replicas as i64)] 
+                   "replicas"    => json_i64!(self.replicas as i64)]
                    // TODO LAST PARAM PENDING : TAG
         ]
- 
+
     }
 }
 
@@ -201,11 +201,17 @@ impl<'a> RQLQuery<'a> for Db {
 impl<'a> Table<'a> {
 
     pub fn insert (&'a self, object : BTreeMap<String, json::Json>) -> TableInsert {
-        let db = Rc::new(self);
+        //let db = Rc::new(self);
+        TableInsert::new(self, object)
+    }
+}
+
+impl<'a> TableInsert<'a> {
+    fn new(table: &'a Table, object: BTreeMap<String, json::Json>) -> TableInsert<'a> {
         TableInsert {
             term    : Term_TermType::INSERT,
             stm     : "insert".to_string(),
-            table   : self,
+            table   : table,
             object  : object
         }
     }
@@ -335,5 +341,3 @@ fn test_insert() {
 
 
 }
-
-
