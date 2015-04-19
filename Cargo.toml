@@ -1,5 +1,5 @@
 [package]
-name = "rethinkd"
+name = "rethinkdb"
 version = "0.0.1"
 authors = ["abraaoisvi <abraao.isvi@gmail.com>", "paulo suzart <paulosuzart@gmail.com>"]
 license = "MIT"
