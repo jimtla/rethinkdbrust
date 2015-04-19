@@ -1,4 +1,5 @@
-use pool::Pool;
+
+
 use std::thread;
 use std::sync::{Arc, Mutex};
 use rustc_serialize::json;
@@ -6,10 +7,27 @@ use rustc_serialize::json::Json;
 use std::io::{BufStream, Error, Write, Read, BufRead};
 use std::net::TcpStream;
 use byteorder::{ReadBytesExt, WriteBytesExt, LittleEndian};
-use ql2::*;
 use std::str;
+use ql2::*;
 
-/* Structs to manage databse */
+
+#[derive(Debug)]
+pub enum RethinkDBError {
+    InternalIoError(Error),
+    ServerError
+}
+
+impl From<Error> for RethinkDBError {
+    fn from(err: Error) -> RethinkDBError {
+        RethinkDBError::InternalIoError(err)
+    }
+}
+
+pub type RethinkDBResult<T> = Result<T, RethinkDBError>;
+
+
+/// Represents a database connection. It is the actual struct that holds `TcpStream`
+/// to server;
 pub struct Connection {
     pub host : String,
     pub port : u16,
@@ -19,6 +37,7 @@ pub struct Connection {
 
 impl Connection {
 
+    /// Connects to the provided server `host` and `port`. `auth` is used for authentication.
     pub fn connect(host: &str , port: u16, auth : &str) -> Connection {
 
         let stream = TcpStream::connect((host, port)).ok().unwrap();
@@ -34,6 +53,7 @@ impl Connection {
         conn
     }
 
+    /// Handshakes the connection. By now only supports `V0_4` and `JSON`.
     fn handshake(&mut self)  {
         self.stream.write_u32::<LittleEndian>(VersionDummy_Version::V0_4 as u32);
         self.stream.write_u32::<LittleEndian>(0);
@@ -52,6 +72,7 @@ impl Connection {
 
     }
 
+    /// Talks to the server sending and reading back the propper JSON messages
     fn send(&mut self, json : Json) -> Json {
 
         self.stream.write_i64::<LittleEndian>(1i64);
@@ -82,28 +103,39 @@ impl Connection {
 
 }
 
+//The main interface entrance. User could should start interactions with RethinkDB
+/// # Examples
+///
+/// ```no_run
+/// use rethinkdb::RethinkDB;
+/// use rethinkdb::api::*;
+///
+/// let mut rethinkdb = RethinkDB::connect("localhost", 7888, "AUTH", 3);
+/// db("test").table_create("person_create").replicas(1i32).run(&mut rethinkdb);
+/// ```
+
 pub struct RethinkDB {
-    pool : Arc<Mutex<Pool<Connection>>>
+    pool : Connection
 }
 
 impl RethinkDB {
+    /// Connects to RethinkDB with `pool_size` connections inside the pool.
     pub fn connect(host: &str , port: u16, auth : &str, pool_size : usize) -> RethinkDB {
-        let mut pool = Pool::with_capacity(pool_size, 0, || {
-            println!("{:?}#####", 3);
-            Connection::connect(host, port, auth) }
-            );
+        // let mut pool = Pool::with_capacity(pool_size, 0, ||  Connection::connect(host, port, auth));
+            
         RethinkDB {
-            pool : Arc::new(Mutex::new(pool))
+            pool : Connection::connect(host, port, auth)
         }
     }
 
+    /// Used to safely grab a reusable connection from the pool and talk to 
+    /// the server.
     #[inline(always)]
-    pub fn send(&self, message : Json) -> Json {
-        let con_arc = self.pool.clone();
-        let mut pool = con_arc.lock().unwrap();
-        let mut conn = &mut pool.checkout().unwrap();
-
-        conn.send(message.clone())
+    pub fn send(&mut self, message : Json) -> Json {
+        // let con_arc = self.pool.clone();
+        // let mut pool = con_arc.lock().unwrap();
+        // let mut conn = &mut pool.checkout().unwrap();
+        self.pool.send(message.clone())
     }
 
 }

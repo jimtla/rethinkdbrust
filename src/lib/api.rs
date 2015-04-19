@@ -7,7 +7,7 @@ use rustc_serialize::json::Json;
 use std::string::String;
 use std::collections::BTreeMap;
 use std::str;
-use rethinkdb::RethinkDB;
+use client::RethinkDB;
 
 
 macro_rules! json_array {
@@ -40,13 +40,14 @@ macro_rules! json_i64 {
     ($s:expr) => { Json::I64($s) }
 }
 
-
+/// Represents `db` command. Must be constructed with `rethinkdb::api::db`.
 pub struct Db {
     term : Term_TermType,
     stm  : String,
     name : String
 }
 
+/// Represents `table_create` command. Must be constructed from a `Db`
 pub struct TableCreate<'a> {
     term : Term_TermType,
     stm  : String,
@@ -121,8 +122,7 @@ pub struct TableInsert<'a> {
     return_changes: bool
 }
 
-///////////////////
-/* Module fns */
+/// Producs a `Db` instance.
 pub fn db(name : &str) -> Db {
     Db {
         term : Term_TermType::DB,
@@ -132,16 +132,18 @@ pub fn db(name : &str) -> Db {
 }
 
 
-///////////////////
-/* Module Traits */
+/// All provides default `run` function for all RQLQueries.
 pub trait RQLQuery<'a> {
 
-    fn run(&'a self, rethinkdb : &RethinkDB) -> bool {
+    /// Takes a mutable reference of `RethinkDB` that handles the connection pool.
+    fn run(&'a self, rethinkdb : &mut RethinkDB) -> bool {
 
         rethinkdb.send(Json::Array(vec![Json::I64(1), self.to_query_types()]));
         true
     }
     
+    /// All implementations knows how to convert to the right Json protocol required by
+    /// RethinkDB
     fn to_query_types(&'a self) -> json::Json;
 
 }
@@ -232,8 +234,7 @@ impl<'a> RQLQuery<'a> for Db {
 
 impl<'a> Table<'a> {
 
-    pub fn insert (&'a self, object : BTreeMap<String, json::Json>) -> TableInsert {
-        //let db = Rc::new(self);
+    pub fn insert (&'a self, object : BTreeMap<String, json::Json>) -> TableInsert { // TODO: fix this type. must be Json::Object
         TableInsert::new(self, object)
     }
 }
@@ -251,23 +252,27 @@ impl<'a> TableInsert<'a> {
         }
     }
 
-    fn conflict(&mut self, value: &str) -> &TableInsert<'a> {//TODO usar enum?
+    pub fn conflict(&mut self, value: &str) -> &TableInsert<'a> {//TODO: use methods that handle specific options.
         self.conflict = value.to_string();
         self
     }
 
-    fn durability(&mut self, value: &str) -> &TableInsert<'a> {
+    pub fn durability(&mut self, value: &str) -> &TableInsert<'a> {
         self.conflict = value.to_string();
         self
     }
 
-    fn return_changes(&mut self, value: bool) -> &TableInsert<'a> {
+    pub fn return_changes(&mut self, value: bool) -> &TableInsert<'a> {
         self.return_changes = value;
         self
     }
 }
 
+/// This is the main implementation of this API. All commands must be created from 
+/// a `Db` instance;
 impl Db {
+
+
     pub fn table_create (&self, name : &str) -> TableCreate {
         TableCreate::new(self, name)
     }

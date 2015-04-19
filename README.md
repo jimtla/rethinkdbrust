@@ -5,19 +5,19 @@ This is a very early stage WIP driver for json protocol. Compatible with Rust be
 # Example
 
 ````rust
-	// Creating new Table
-    let mut conn = Connection::connect("localhost", 7888, "auth-token");
-    let db = db("test");
-    let tc = db.table_create("person_create").replicas(1i32).run(&mut conn);
+  use rethinkdb::RethinkDB;
+  use rethinkdb::api::*;
 
-    // Inserting data
+	  let mut rethinkdb = RethinkDB::connect("localhost", 7888, "AUTH", 3); // 3 connections in the pool 
+    let tc = db("test").table_create("person").replicas(1i32).run(&mut rethinkdb);
+
     struct Person {
     	name : String,
     	age  : u32,
     }
     let nacho = Person{name : "nacho".to_string(), age : 6};
 
-    db("test").table("person").insert(json::encode(nacho)).run(&mut conn);
+    db("test").table("person").insert(json::encode(nacho)).run(&mut rethinkdb);
 
 
 ````

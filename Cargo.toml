@@ -6,4 +6,8 @@ authors = ["abraaoisvi <abraao.isvi@gmail.com>", "paulo suzart <paulosuzart@gmai
 [dependencies]
 rustc-serialize = "*"
 byteorder = "*"
-pool = "*"
+
+[lib]
+name = "rethinkdb"
+path = "src/lib/mod.rs"
+
