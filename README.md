@@ -8,7 +8,7 @@ This is a very early stage WIP driver for json protocol. Compatible with Rust be
   use rethinkdb::RethinkDB;
   use rethinkdb::api::*;
 
-	  let mut rethinkdb = RethinkDB::connect("localhost", 7888, "AUTH", 3); // 3 connections in the pool 
+	  let mut rethinkdb = RethinkDB::connect("localhost", 7888, "AUTH", 3);
     let tc = db("test").table_create("person").replicas(1i32).run(&mut rethinkdb);
 
     struct Person {
@@ -27,6 +27,7 @@ This is a very early stage WIP driver for json protocol. Compatible with Rust be
    - TABLE_CREATE
    - TABLE
    - TABLE_DROP
+   - GET
 
 # Contributing
 By now it is just a PR with the project bein able to build.

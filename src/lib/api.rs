@@ -66,6 +66,40 @@ pub struct TableDrop<'a> {
     name : String
 }
 
+pub struct Get<'a> {
+    term : Term_TermType,
+    stm  : String,
+    table   : &'a Table<'a>,
+    pk   : Json
+}
+
+
+pub struct Table<'a> {//TODO criar um so struct ( Command? )
+    term : Term_TermType,
+    stm  : String,
+    db   : &'a Db,
+    name : String
+}
+
+pub struct TableInsert<'a> {
+    term    : Term_TermType,
+    stm     : String,
+    table   : &'a Table<'a>,
+    object  : BTreeMap<String, json::Json>,
+    conflict: String,
+    durability: String,
+    return_changes: bool
+}
+
+/// Producs a `Db` instance.
+pub fn db(name : &str) -> Db {
+    Db {
+        term : Term_TermType::DB,
+        stm  : "db".to_string(),
+        name : name.to_string()
+    }
+}
+
 impl<'a> TableDrop<'a> {
     fn new(db : &'a Db, name : &str) -> TableDrop<'a> {
         TableDrop {
@@ -92,6 +126,11 @@ impl<'a> TableCreate<'a> {
         }
     }
 
+    pub fn primary_key(&'a mut self, primary_key : String) -> &mut TableCreate<'a> {
+        self.primary_key = primary_key.clone();
+        self
+    }
+
     pub fn replicas(&'a mut self, total : i32) -> &mut TableCreate<'a> {
         self.replicas = total;
         self
@@ -100,34 +139,6 @@ impl<'a> TableCreate<'a> {
     pub fn shards(&'a mut self, total : i32) -> &mut TableCreate<'a> {
         self.shards = total;
         self
-    }
-}
-
-
-
-pub struct Table<'a> {//TODO criar um so struct ( Command? )
-    term : Term_TermType,
-    stm  : String,
-    db   : &'a Db,
-    name : String
-}
-
-pub struct TableInsert<'a> {
-    term    : Term_TermType,
-    stm     : String,
-    table   : &'a Table<'a>,
-    object  : BTreeMap<String, json::Json>,
-    conflict: String,
-    durability: String,
-    return_changes: bool
-}
-
-/// Producs a `Db` instance.
-pub fn db(name : &str) -> Db {
-    Db {
-        term : Term_TermType::DB,
-        stm  : "db".to_string(),
-        name : name.to_string()
     }
 }
 
@@ -219,6 +230,18 @@ impl<'a> RQLQuery<'a> for TableInsert<'a> {
     }
 }
 
+impl<'a> RQLQuery<'a> for Get<'a> {
+    fn to_query_types(&'a self) -> json::Json {
+        json_array![
+            json_i64!(self.term.clone() as i64),
+            json_array![
+                self.table.to_query_types(),
+                self.pk.clone()
+            ]
+        ]
+    }
+}
+
 impl<'a> RQLQuery<'a> for Db {
     fn to_query_types(&'a self) -> json::Json {
 
@@ -234,8 +257,12 @@ impl<'a> RQLQuery<'a> for Db {
 
 impl<'a> Table<'a> {
 
-    pub fn insert (&'a self, object : BTreeMap<String, json::Json>) -> TableInsert { // TODO: fix this type. must be Json::Object
+    pub fn insert (&'a self, object: BTreeMap<String, json::Json>) -> TableInsert { // TODO: fix this type. must be Json::Object
         TableInsert::new(self, object)
+    }
+
+    pub fn get(&self, pk : Json) -> Get {
+        Get::new(self, pk)
     }
 }
 
@@ -289,7 +316,19 @@ impl Db {
     pub fn table_drop(&self, name : &str) -> TableDrop {
         TableDrop::new(self, name)
     }
+
+
 }
 
+impl<'a> Get<'a> {
+    pub fn new(table : &'a Table, pk : Json) -> Get<'a> { // TODO: Create multople methods by key type
+        Get {
+            term : Term_TermType::GET,
+            stm  : "get".to_string(),
+            table : table,
+            pk   : pk
+        }
+    }
+}
 
 
